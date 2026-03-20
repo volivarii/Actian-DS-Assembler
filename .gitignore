@@ -2,3 +2,7 @@
 node_modules/
 plugin/dist/
 .env
+
+# Generated spec files (created by Claude, served temporarily)
+spec*.json
+test-spec*.json
