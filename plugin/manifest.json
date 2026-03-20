@@ -5,7 +5,7 @@
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "networkAccess": {
-    "allowedDomains": ["localhost", "127.0.0.1"]
+    "devAllowedDomains": ["localhost", "127.0.0.1"]
   },
   "editorType": ["figma"]
 }
