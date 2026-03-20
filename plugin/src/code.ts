@@ -49,18 +49,20 @@ function applySizing(node: SceneNode, width: number | 'hug' | 'fill' | undefined
     n.layoutSizingHorizontal = 'FIXED';
   } else if (width === 'fill') {
     n.layoutSizingHorizontal = 'FILL';
-  } else {
-    n.layoutSizingHorizontal = 'HUG';
+  } else if (width === 'hug') {
+    try { n.layoutSizingHorizontal = 'HUG'; } catch (_) { /* not in auto-layout */ }
   }
+  // undefined = leave as default
 
   if (typeof height === 'number') {
     n.resize(n.width, height);
     n.layoutSizingVertical = 'FIXED';
   } else if (height === 'fill') {
     n.layoutSizingVertical = 'FILL';
-  } else {
-    n.layoutSizingVertical = 'HUG';
+  } else if (height === 'hug') {
+    try { n.layoutSizingVertical = 'HUG'; } catch (_) { /* not in auto-layout */ }
   }
+  // undefined = leave as default
 }
 
 // Deferred sizing map — Figma nodes are frozen, can't add properties to them
