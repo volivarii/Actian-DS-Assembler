@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "name": "Test Screen",
+  "type": "frame",
+  "layout": "vertical",
+  "width": 1440,
+  "height": 900,
+  "children": [
+    { "component": "FM App_header", "width": "fill" },
+    {
+      "type": "frame",
+      "layout": "horizontal",
+      "width": "fill",
+      "height": "fill",
+      "children": [
+        { "component": "FM Side navigation bar", "height": "fill" },
+        {
+          "type": "frame",
+          "name": "Content",
+          "layout": "vertical",
+          "spacing": 16,
+          "padding": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
+          "width": "fill",
+          "children": [
+            { "component": "FM Placeholder", "width": "fill" },
+            { "component": "FM Text input field", "width": "fill" },
+            { "component": "FM Text input field", "width": "fill" },
+            {
+              "type": "frame",
+              "layout": "horizontal",
+              "spacing": 8,
+              "children": [
+                { "component": "FM Button", "props": { "Type": "Primary" } },
+                { "component": "FM Button", "props": { "Type": "Secondary" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -65,6 +65,10 @@ function hexToRgb(hex: string): RGB {
   };
 }
 
+export function hasVariants(entry: ComponentEntry): boolean {
+  return Object.keys(entry.variants).length > 0;
+}
+
 export function getRegistryStats(): { total: number; fatMarker: number; ds2026: number } {
   let fatMarker = 0;
   let ds2026 = 0;

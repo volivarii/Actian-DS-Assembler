@@ -1,4 +1,4 @@
-import { lookupComponent, resolveVariantProps, resolveTextProps, resolveColor, getRegistryStats } from './registry';
+import { lookupComponent, resolveVariantProps, resolveTextProps, resolveColor, getRegistryStats, hasVariants } from './registry';
 
 interface SpecFrame {
   type: 'frame';
@@ -101,14 +101,30 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
     frame.cornerRadius = spec.cornerRadius;
   }
 
+  const childNodes: SceneNode[] = [];
   for (const child of spec.children) {
     const childNode = await assembleNode(child);
     if (childNode) {
       frame.appendChild(childNode);
+      childNodes.push(childNode);
     }
   }
 
-  applySizing(frame, spec.width, spec.height);
+  // Apply deferred FILL sizing on children now that they're in an auto-layout parent
+  for (const child of childNodes) {
+    const dw = (child as any).__deferredWidth;
+    const dh = (child as any).__deferredHeight;
+    if (dw || dh) {
+      applySizing(child, dw, dh);
+      delete (child as any).__deferredWidth;
+      delete (child as any).__deferredHeight;
+    }
+  }
+
+  // Apply sizing on the frame itself (only FILL needs a parent, HUG/FIXED are fine)
+  if (spec.width !== 'fill' && spec.height !== 'fill') {
+    applySizing(frame, spec.width, spec.height);
+  }
 
   return frame;
 }
@@ -121,8 +137,19 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
   }
 
   try {
-    const component = await figma.importComponentByKeyAsync(entry.key);
-    const instance = component.createInstance();
+    let instance: InstanceNode;
+
+    if (hasVariants(entry)) {
+      // Component set: import the set, then create instance from default variant
+      const componentSet = await figma.importComponentSetByKeyAsync(entry.key);
+      const defaultVariant = componentSet.defaultVariant;
+      instance = defaultVariant.createInstance();
+    } else {
+      // Standalone component: import directly
+      const component = await figma.importComponentByKeyAsync(entry.key);
+      instance = component.createInstance();
+    }
+
     sendLog(`OK: ${spec.component}`);
 
     if (spec.props) {
@@ -139,9 +166,9 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
       }
     }
 
-    if (spec.width || spec.height) {
-      applySizing(instance, spec.width, spec.height);
-    }
+    // Store sizing spec — will be applied after appendChild
+    (instance as any).__deferredWidth = spec.width;
+    (instance as any).__deferredHeight = spec.height;
 
     return instance;
   } catch (err) {
@@ -172,6 +199,19 @@ figma.ui.onmessage = async (msg: any) => {
     const root = await assembleNode(spec);
     if (root) {
       figma.currentPage.appendChild(root);
+      // Apply deferred sizing on root if needed
+      const dw = (root as any).__deferredWidth;
+      const dh = (root as any).__deferredHeight;
+      if (dw || dh) {
+        applySizing(root, dw, dh);
+      }
+      // Apply frame-level FILL sizing that was deferred
+      if ('type' in spec && (spec as SpecFrame).width === 'fill') {
+        (root as any).layoutSizingHorizontal = 'FILL';
+      }
+      if ('type' in spec && (spec as SpecFrame).height === 'fill') {
+        (root as any).layoutSizingVertical = 'FILL';
+      }
       figma.viewport.scrollAndZoomIntoView([root]);
       figma.ui.postMessage({
         type: 'done',
