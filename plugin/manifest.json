@@ -6,7 +6,7 @@
   "ui": "dist/ui.html",
   "networkAccess": {
     "allowedDomains": ["none"],
-    "devAllowedDomains": ["localhost", "127.0.0.1"],
+    "devAllowedDomains": ["http://localhost", "http://127.0.0.1"],
     "reasoning": "Fetches layout spec JSON from localhost during development"
   },
   "editorType": ["figma"]
