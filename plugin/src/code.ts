@@ -122,8 +122,14 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
     }
   }
 
-  // Apply sizing on the frame itself (only FILL needs a parent, HUG/FIXED are fine)
-  if (spec.width !== 'fill' && spec.height !== 'fill') {
+  // Apply non-FILL sizing immediately; defer FILL until after appendChild
+  const hasHorizontalFill = spec.width === 'fill';
+  const hasVerticalFill = spec.height === 'fill';
+
+  if (hasHorizontalFill || hasVerticalFill) {
+    // Defer FILL sizing — needs to be in an auto-layout parent first
+    deferredSizing.set(frame, { width: spec.width, height: spec.height });
+  } else {
     applySizing(frame, spec.width, spec.height);
   }
 
