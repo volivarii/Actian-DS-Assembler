@@ -1,13 +1,24 @@
-# Actian DS Assembler
+# DS Assembler
 
-Figma plugin that assembles real component instances from published Actian DS2026 and Fat Marker libraries via JSON layout specs.
+Figma plugin that assembles real component instances from any published design system library via JSON layout specs.
 
-## Prerequisites
+Works with any Figma component library — bring your own registry.
 
-- Figma desktop app
-- FM Kit and DS2026 libraries enabled in your Figma team
-- Node.js 18+
-- A Figma personal access token (for building the registry)
+## Features
+
+- Assembles real, editable component instances linked to your design system
+- Variant and text property overrides
+- Auto-layout frames with fill/hug sizing, alignment, padding, spacing
+- Token-based fill colors (resolved from a token map)
+- Progress bar with cancel support
+- Component import caching (only imports each unique component once)
+- Non-blocking assembly (yields to main thread to prevent freezing)
+
+## How it works
+
+1. **Build a component registry** — query the Figma REST API for your library's component keys and variants
+2. **Serve the registry + a layout spec** on localhost
+3. **Run the plugin** — it loads the registry, then assembles real instances from the spec
 
 ## Setup
 
@@ -17,8 +28,6 @@ Figma plugin that assembles real component instances from published Actian DS202
 FIGMA_TOKEN=figd_xxx node registry/build-registry.js
 node registry/build-token-map.js
 ```
-
-Re-run when library components are added or renamed.
 
 ### 2. Build the Figma plugin
 
@@ -32,20 +41,17 @@ Plugins → Development → Import plugin from manifest → select `plugin/manif
 
 ## Usage
 
-1. Serve a layout spec JSON on localhost:
+1. Serve the project directory:
    ```bash
    python3 serve.py 8765
    ```
-2. In Figma, run **Actian DS Assembler**
-3. Enter the spec URL (default: `http://localhost:8765/spec.json`)
-4. Click **Assemble**
-5. Real component instances appear on your canvas
+2. In Figma, run **DS Assembler**
+3. Click **Load Registry** (fetches from `localhost:8765/registry/`)
+4. Enter a spec file name (e.g. `spec.json`)
+5. Click **Assemble**
 
 ## Layout Spec Format
 
-See the [design spec](https://github.com/volivarii/Actian-DS-Claude-plugin/blob/main/docs/superpowers/specs/2026-03-20-figma-component-assembler-design.md) for the full JSON schema.
-
-Quick example:
 ```json
 {
   "version": "1.0",
@@ -55,14 +61,14 @@ Quick example:
   "width": 1440,
   "height": 900,
   "children": [
-    { "component": "FM App_header", "width": "fill" },
+    { "component": "My Header", "width": "fill" },
     {
       "type": "frame",
       "layout": "horizontal",
       "width": "fill",
       "height": "fill",
       "children": [
-        { "component": "FM Side navigation bar", "height": "fill" },
+        { "component": "My Sidebar", "height": "fill" },
         {
           "type": "frame",
           "name": "Content",
@@ -71,7 +77,7 @@ Quick example:
           "padding": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
           "width": "fill",
           "children": [
-            { "component": "FM Button", "props": { "Type": "Primary" } }
+            { "component": "My Button", "props": { "Type": "Primary" }, "text": { "Label": "Save" } }
           ]
         }
       ]
@@ -80,11 +86,21 @@ Quick example:
 }
 ```
 
-## With Claude
+## Registry Format
 
-Use `/generate-flow` with "use real components" in the [Actian DS Claude plugin](https://github.com/volivarii/Actian-DS-Claude-plugin). Claude outputs a layout spec JSON and serves it locally.
+The registry maps component names to Figma component keys:
 
-## Registry Stats
-
-- 1112 components (36 FM Kit, 1076 DS2026)
-- 202 design tokens (Actian theme)
+```json
+{
+  "meta": { "generatedAt": "...", "libraries": { ... } },
+  "components": {
+    "My Button": {
+      "key": "abc123...",
+      "library": "my-lib",
+      "variants": { "Type": ["Primary", "Secondary"] },
+      "variantShortNames": { "Type": "Type" },
+      "textProperties": ["Label#1:2"]
+    }
+  }
+}
+```

@@ -1,6 +1,6 @@
 {
-  "name": "Actian DS Assembler",
-  "id": "actian-ds-assembler",
+  "name": "DS Assembler",
+  "id": "ds-assembler",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",

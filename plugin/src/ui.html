@@ -4,43 +4,83 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Inter, system-ui, sans-serif; font-size: 13px; color: #333; padding: 16px; }
-    h1 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
-    label { display: block; font-weight: 500; margin-bottom: 4px; }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 11px; color: #888; margin-bottom: 16px; }
+    label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px; }
     input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
     input:focus { outline: none; border-color: #0550dc; }
-    button { width: 100%; padding: 10px; background: #0550dc; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
-    button:hover { background: #0440b0; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .how-to { background: #f5f5fa; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 12px; line-height: 1.5; color: #555; }
-    .how-to strong { color: #333; }
-    .how-to ol { margin: 6px 0 0 16px; padding: 0; }
-    .how-to li { margin-bottom: 2px; }
-    .how-to code { background: #e8e8f0; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
-    #log { margin-top: 16px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 11px; line-height: 1.6; color: #666; }
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-primary { background: #0550dc; color: white; }
+    .btn-primary:hover { background: #0440b0; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-cancel { background: #f5f5f5; color: #666; margin-top: 8px; }
+    .btn-cancel:hover { background: #eee; }
+    .hidden { display: none; }
+
+    .status-bar { margin-top: 12px; padding: 8px 10px; background: #f5f5fa; border-radius: 6px; font-size: 11px; color: #555; }
+    .status-bar.loaded { background: #f0ffec; color: #047800; }
+    .status-bar.error { background: #fcf3f3; color: #c10c0d; }
+
+    .progress-container { margin-top: 12px; }
+    .progress-bar { height: 4px; background: #eee; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #0550dc; border-radius: 2px; width: 0%; transition: width 0.15s; }
+    .progress-text { font-size: 11px; color: #888; margin-top: 4px; }
+
+    #log { margin-top: 12px; max-height: 160px; overflow-y: auto; font-family: monospace; font-size: 10px; line-height: 1.5; color: #888; }
     .log-error { color: #c10c0d; }
     .log-success { color: #047800; }
+
+    .section { margin-bottom: 16px; }
+    .how-to { background: #f5f5fa; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 11px; line-height: 1.5; color: #555; }
+    .how-to strong { color: #333; }
+    .how-to ol { margin: 4px 0 0 16px; padding: 0; }
+    .how-to code { background: #e8e8f0; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
   </style>
 </head>
 <body>
-  <h1>Actian DS Assembler</h1>
+  <h1>DS Assembler</h1>
+  <div class="subtitle">Assemble real component instances from JSON layout specs</div>
+
   <div class="how-to">
     <strong>How to use:</strong>
     <ol>
-      <li>Serve a JSON layout spec: <code>python3 serve.py 8765</code></li>
-      <li>Enter the spec URL below</li>
-      <li>Click <strong>Assemble</strong></li>
+      <li>Serve your registry, tokens, and spec: <code>python3 serve.py 8765</code></li>
+      <li>Click <strong>Load Registry</strong> to connect</li>
+      <li>Click <strong>Assemble</strong> to build</li>
     </ol>
-    Real component instances from FM Kit / DS2026 will be placed on your canvas.
   </div>
-  <label for="url">Spec URL</label>
-  <input id="url" type="text" value="http://localhost:8765/spec.json" />
-  <button id="assemble" onclick="handleAssemble()">Assemble</button>
+
+  <div class="section">
+    <label>Base URL</label>
+    <input id="baseUrl" type="text" value="http://localhost:8765" placeholder="http://localhost:8765" />
+    <button class="btn btn-primary" id="loadBtn" onclick="handleLoadRegistry()">Load Registry</button>
+    <div id="registryStatus" class="status-bar hidden"></div>
+  </div>
+
+  <div id="assembleSection" class="section hidden">
+    <label>Spec file</label>
+    <input id="specFile" type="text" value="spec.json" placeholder="spec.json" />
+    <button class="btn btn-primary" id="assembleBtn" onclick="handleAssemble()">Assemble</button>
+    <button class="btn btn-cancel hidden" id="cancelBtn" onclick="handleCancel()">Cancel</button>
+
+    <div id="progressContainer" class="progress-container hidden">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText"></div>
+    </div>
+  </div>
+
   <div id="log"></div>
 
   <script>
     const logEl = document.getElementById('log');
-    const btn = document.getElementById('assemble');
-    const urlInput = document.getElementById('url');
+    const loadBtn = document.getElementById('loadBtn');
+    const assembleBtn = document.getElementById('assembleBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const registryStatus = document.getElementById('registryStatus');
+    const assembleSection = document.getElementById('assembleSection');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
 
     function log(msg, type) {
       const div = document.createElement('div');
@@ -50,40 +90,120 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    async function handleAssemble() {
-      const url = urlInput.value.trim();
-      if (!url) return;
+    function showStatus(el, text, type) {
+      el.textContent = text;
+      el.className = 'status-bar ' + (type || '');
+      el.classList.remove('hidden');
+    }
 
+    async function handleLoadRegistry() {
+      const baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Loading...';
       logEl.innerHTML = '';
-      btn.disabled = true;
-      btn.textContent = 'Assembling...';
-      log('Fetching spec from ' + url + '...');
 
       try {
-        const res = await fetch(url);
+        log('Fetching registry from ' + baseUrl + '/registry/component-registry.json...');
+        const [regRes, tokRes] = await Promise.all([
+          fetch(baseUrl + '/registry/component-registry.json'),
+          fetch(baseUrl + '/registry/token-map.json').catch(() => null)
+        ]);
+
+        if (!regRes.ok) throw new Error('Registry: HTTP ' + regRes.status);
+        const registry = await regRes.json();
+        const tokenMap = tokRes && tokRes.ok ? await tokRes.json() : {};
+
+        log('Registry loaded. Sending to plugin...');
+        parent.postMessage({ pluginMessage: { type: 'load-registry', registry, tokenMap } }, '*');
+      } catch (err) {
+        log('Failed: ' + err.message, 'error');
+        showStatus(registryStatus, 'Failed to load registry: ' + err.message, 'error');
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load Registry';
+      }
+    }
+
+    async function handleAssemble() {
+      const baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+      const specFile = document.getElementById('specFile').value.trim();
+      const specUrl = baseUrl + '/' + specFile;
+
+      assembleBtn.disabled = true;
+      assembleBtn.textContent = 'Assembling...';
+      cancelBtn.classList.remove('hidden');
+      progressContainer.classList.remove('hidden');
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Starting...';
+
+      try {
+        log('Fetching spec from ' + specUrl + '...');
+        const res = await fetch(specUrl);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const spec = await res.json();
-        log('Spec loaded. Sending to plugin...');
+        log('Spec loaded. Assembling...');
         parent.postMessage({ pluginMessage: { type: 'assemble', spec } }, '*');
       } catch (err) {
         log('Failed to fetch spec: ' + err.message, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Assemble';
+        resetAssembleUI();
       }
+    }
+
+    function handleCancel() {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+      log('Cancelling...', 'error');
+    }
+
+    function resetAssembleUI() {
+      assembleBtn.disabled = false;
+      assembleBtn.textContent = 'Assemble';
+      cancelBtn.classList.add('hidden');
+      progressContainer.classList.add('hidden');
     }
 
     onmessage = (event) => {
       const msg = event.data.pluginMessage;
+      if (!msg) return;
+
       if (msg.type === 'log') log(msg.text, msg.level);
-      if (msg.type === 'done') {
-        log(msg.text, 'success');
-        btn.disabled = false;
-        btn.textContent = 'Assemble';
+
+      if (msg.type === 'registry-loaded') {
+        showStatus(registryStatus, 'Registry: ' + msg.components + ' components, ' + msg.tokens + ' tokens', 'loaded');
+        assembleSection.classList.remove('hidden');
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load Registry';
       }
+
+      if (msg.type === 'phase') {
+        progressFill.style.width = '0%';
+        if (msg.phase === 'importing') {
+          progressText.textContent = 'Importing ' + msg.total + ' unique components...';
+        } else {
+          progressText.textContent = 'Assembling ' + msg.total + ' nodes...';
+        }
+      }
+
+      if (msg.type === 'import-progress') {
+        const pct = Math.round((msg.current / msg.total) * 50);
+        progressFill.style.width = pct + '%';
+        progressText.textContent = 'Importing components: ' + msg.current + '/' + msg.total;
+      }
+
+      if (msg.type === 'progress') {
+        const pct = 50 + Math.round((msg.current / msg.total) * 50);
+        progressFill.style.width = pct + '%';
+        progressText.textContent = 'Assembling: ' + msg.current + '/' + msg.total + ' nodes';
+      }
+
+      if (msg.type === 'done') {
+        progressFill.style.width = '100%';
+        progressText.textContent = '';
+        log(msg.text, 'success');
+        resetAssembleUI();
+      }
+
       if (msg.type === 'error') {
         log(msg.text, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Assemble';
+        resetAssembleUI();
       }
     };
   </script>
