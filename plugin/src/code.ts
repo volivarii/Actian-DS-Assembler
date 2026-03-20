@@ -42,7 +42,9 @@ const COUNTER_ALIGN_MAP = {
   'max': 'MAX',
 } as const;
 
-function applySizing(node: SceneNode, width: number | 'hug' | 'fill' | undefined, height: number | 'hug' | 'fill' | undefined) {
+// Apply a single dimension of sizing. Only call when node is in the right context.
+function applyWidth(node: SceneNode, width: number | 'hug' | 'fill' | undefined) {
+  if (width === undefined) return;
   const n = node as any;
   if (typeof width === 'number') {
     n.resize(width, n.height);
@@ -50,23 +52,25 @@ function applySizing(node: SceneNode, width: number | 'hug' | 'fill' | undefined
   } else if (width === 'fill') {
     n.layoutSizingHorizontal = 'FILL';
   } else if (width === 'hug') {
-    try { n.layoutSizingHorizontal = 'HUG'; } catch (_) { /* not in auto-layout */ }
+    try { n.layoutSizingHorizontal = 'HUG'; } catch (_) {}
   }
-  // undefined = leave as default
+}
 
+function applyHeight(node: SceneNode, height: number | 'hug' | 'fill' | undefined) {
+  if (height === undefined) return;
+  const n = node as any;
   if (typeof height === 'number') {
     n.resize(n.width, height);
     n.layoutSizingVertical = 'FIXED';
   } else if (height === 'fill') {
     n.layoutSizingVertical = 'FILL';
   } else if (height === 'hug') {
-    try { n.layoutSizingVertical = 'HUG'; } catch (_) { /* not in auto-layout */ }
+    try { n.layoutSizingVertical = 'HUG'; } catch (_) {}
   }
-  // undefined = leave as default
 }
 
-// Deferred sizing map — Figma nodes are frozen, can't add properties to them
-const deferredSizing = new Map<SceneNode, { width?: number | 'hug' | 'fill'; height?: number | 'hug' | 'fill' }>();
+// Track which nodes need FILL applied after they're appended to an auto-layout parent
+const deferredFills = new Map<SceneNode, { fillWidth: boolean; fillHeight: boolean }>();
 
 function sendLog(text: string, level?: string) {
   figma.ui.postMessage({ type: 'log', text, level });
@@ -76,8 +80,13 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
   const frame = figma.createFrame();
   frame.name = spec.name || 'Frame';
 
+  // Set auto-layout
   frame.layoutMode = spec.layout === 'horizontal' ? 'HORIZONTAL' : 'VERTICAL';
   frame.itemSpacing = spec.spacing || 0;
+
+  // Default to HUG on both axes (Figma defaults to FIXED 100x100)
+  frame.layoutSizingHorizontal = 'HUG';
+  frame.layoutSizingVertical = 'HUG';
 
   if (spec.padding) {
     frame.paddingTop = spec.padding.top || 0;
@@ -106,6 +115,7 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
     frame.cornerRadius = spec.cornerRadius;
   }
 
+  // Process children
   const childNodes: SceneNode[] = [];
   for (const child of spec.children) {
     const childNode = await assembleNode(child);
@@ -115,24 +125,31 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
     }
   }
 
-  // Apply deferred sizing on children now that they're in an auto-layout parent
+  // Apply deferred FILL sizing on children — now they're in this auto-layout frame
   for (const child of childNodes) {
-    const deferred = deferredSizing.get(child);
+    const deferred = deferredFills.get(child);
     if (deferred) {
-      applySizing(child, deferred.width, deferred.height);
-      deferredSizing.delete(child);
+      if (deferred.fillWidth) applyWidth(child, 'fill');
+      if (deferred.fillHeight) applyHeight(child, 'fill');
+      deferredFills.delete(child);
     }
   }
 
-  // Apply non-FILL sizing immediately; defer FILL until after appendChild
-  const hasHorizontalFill = spec.width === 'fill';
-  const hasVerticalFill = spec.height === 'fill';
+  // Apply own sizing: FIXED and HUG immediately, defer FILL
+  const needsDeferWidth = spec.width === 'fill';
+  const needsDeferHeight = spec.height === 'fill';
 
-  if (hasHorizontalFill || hasVerticalFill) {
-    // Defer FILL sizing — needs to be in an auto-layout parent first
-    deferredSizing.set(frame, { width: spec.width, height: spec.height });
-  } else {
-    applySizing(frame, spec.width, spec.height);
+  // Apply non-fill dimensions immediately
+  if (!needsDeferWidth && spec.width !== undefined) {
+    applyWidth(frame, spec.width);
+  }
+  if (!needsDeferHeight && spec.height !== undefined) {
+    applyHeight(frame, spec.height);
+  }
+
+  // Defer fill dimensions until this frame is appended to a parent
+  if (needsDeferWidth || needsDeferHeight) {
+    deferredFills.set(frame, { fillWidth: needsDeferWidth, fillHeight: needsDeferHeight });
   }
 
   return frame;
@@ -141,7 +158,7 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
 async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
   const entry = lookupComponent(spec.component);
   if (!entry) {
-    sendLog(`Warning: Component not in registry: "${spec.component}" — skipped`, 'error');
+    sendLog(`Warning: "${spec.component}" not in registry — skipped`, 'error');
     return null;
   }
 
@@ -149,35 +166,53 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
     let instance: InstanceNode;
 
     if (hasVariants(entry)) {
-      // Component set: import the set, then create instance from default variant
       const componentSet = await figma.importComponentSetByKeyAsync(entry.key);
       const defaultVariant = componentSet.defaultVariant;
       instance = defaultVariant.createInstance();
     } else {
-      // Standalone component: import directly
       const component = await figma.importComponentByKeyAsync(entry.key);
       instance = component.createInstance();
     }
 
     sendLog(`OK: ${spec.component}`);
 
+    // Set variant properties
     if (spec.props) {
       const resolved = resolveVariantProps(entry, spec.props);
       if (Object.keys(resolved).length > 0) {
-        instance.setProperties(resolved);
+        try {
+          instance.setProperties(resolved);
+        } catch (err) {
+          sendLog(`  variant override failed: ${(err as Error).message}`, 'error');
+        }
       }
     }
 
+    // Set text overrides
     if (spec.text) {
       const resolved = resolveTextProps(entry, spec.text);
       for (const [propName, value] of Object.entries(resolved)) {
-        instance.setProperties({ [propName]: value });
+        try {
+          instance.setProperties({ [propName]: value });
+        } catch (err) {
+          sendLog(`  text override failed for "${propName}": ${(err as Error).message}`, 'error');
+        }
       }
     }
 
-    // Store sizing spec — will be applied after appendChild
-    if (spec.width || spec.height) {
-      deferredSizing.set(instance, { width: spec.width, height: spec.height });
+    // Defer FILL sizing, apply non-fill immediately
+    const needsDeferWidth = spec.width === 'fill';
+    const needsDeferHeight = spec.height === 'fill';
+
+    if (!needsDeferWidth && spec.width !== undefined) {
+      applyWidth(instance, spec.width);
+    }
+    if (!needsDeferHeight && spec.height !== undefined) {
+      applyHeight(instance, spec.height);
+    }
+
+    if (needsDeferWidth || needsDeferHeight) {
+      deferredFills.set(instance, { fillWidth: needsDeferWidth, fillHeight: needsDeferHeight });
     }
 
     return instance;
@@ -194,6 +229,7 @@ async function assembleNode(spec: SpecNode): Promise<SceneNode | null> {
   return assembleFrame(spec);
 }
 
+// Plugin entry point
 figma.showUI(__html__, { width: 360, height: 400 });
 
 const stats = getRegistryStats();
@@ -209,11 +245,12 @@ figma.ui.onmessage = async (msg: any) => {
     const root = await assembleNode(spec);
     if (root) {
       figma.currentPage.appendChild(root);
-      // Apply deferred sizing on root if needed
-      const deferred = deferredSizing.get(root);
+      // Apply deferred FILL on root if needed
+      const deferred = deferredFills.get(root);
       if (deferred) {
-        applySizing(root, deferred.width, deferred.height);
-        deferredSizing.delete(root);
+        if (deferred.fillWidth) applyWidth(root, 'fill');
+        if (deferred.fillHeight) applyHeight(root, 'fill');
+        deferredFills.delete(root);
       }
       figma.viewport.scrollAndZoomIntoView([root]);
       figma.ui.postMessage({

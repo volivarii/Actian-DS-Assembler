@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "name": "Test Screen",
+  "name": "Sizing + Overrides Test",
   "type": "frame",
   "layout": "vertical",
   "width": 1440,
   "height": 900,
   "children": [
-    { "component": "FM App_header", "width": "fill" },
+    { "component": "FM App_header", "props": { "Type": "Studio" }, "width": "fill" },
     {
       "type": "frame",
       "layout": "horizontal",
@@ -21,17 +21,30 @@
           "spacing": 16,
           "padding": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
           "width": "fill",
+          "height": "fill",
+          "fill": "#F5F5FA",
           "children": [
-            { "component": "FM Placeholder", "width": "fill" },
-            { "component": "FM Text input field", "width": "fill" },
-            { "component": "FM Text input field", "width": "fill" },
+            { "component": "FM Text input field", "props": { "Type": "Placeholder" }, "text": { "Input Text": "Enter your name..." }, "width": "fill" },
+            { "component": "FM Text input field", "props": { "Type": "Default" }, "text": { "Input Text": "john.doe@actian.com" }, "width": "fill" },
+            { "component": "FM Dropdown", "props": { "Type": "Placeholder" }, "width": "fill" },
+            {
+              "type": "frame",
+              "layout": "horizontal",
+              "spacing": 12,
+              "children": [
+                { "component": "FM Radio button", "props": { "State": "On", "Style": "Default" } },
+                { "component": "FM Radio button", "props": { "State": "Off", "Style": "Default" } }
+              ]
+            },
             {
               "type": "frame",
               "layout": "horizontal",
               "spacing": 8,
+              "align": "max",
+              "width": "fill",
               "children": [
-                { "component": "FM Button", "props": { "Type": "Primary" } },
-                { "component": "FM Button", "props": { "Type": "Secondary" } }
+                { "component": "FM Button", "props": { "Type": "Secondary" }, "text": { "Label": "Cancel" } },
+                { "component": "FM Button", "props": { "Type": "Primary" }, "text": { "Label": "Save changes" } }
               ]
             }
           ]
