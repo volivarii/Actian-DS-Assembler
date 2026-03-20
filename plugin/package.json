@@ -1,0 +1,16 @@
+{
+  "name": "actian-ds-assembler",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:code && npm run build:ui",
+    "build:code": "esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2020 --loader:.json=json",
+    "build:ui": "mkdir -p dist && cp src/ui.html dist/ui.html",
+    "watch": "npm run build:code -- --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.0.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  }
+}
