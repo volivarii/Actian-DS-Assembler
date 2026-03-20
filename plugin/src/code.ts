@@ -63,6 +63,9 @@ function applySizing(node: SceneNode, width: number | 'hug' | 'fill' | undefined
   }
 }
 
+// Deferred sizing map — Figma nodes are frozen, can't add properties to them
+const deferredSizing = new Map<SceneNode, { width?: number | 'hug' | 'fill'; height?: number | 'hug' | 'fill' }>();
+
 function sendLog(text: string, level?: string) {
   figma.ui.postMessage({ type: 'log', text, level });
 }
@@ -110,14 +113,12 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode> {
     }
   }
 
-  // Apply deferred FILL sizing on children now that they're in an auto-layout parent
+  // Apply deferred sizing on children now that they're in an auto-layout parent
   for (const child of childNodes) {
-    const dw = (child as any).__deferredWidth;
-    const dh = (child as any).__deferredHeight;
-    if (dw || dh) {
-      applySizing(child, dw, dh);
-      delete (child as any).__deferredWidth;
-      delete (child as any).__deferredHeight;
+    const deferred = deferredSizing.get(child);
+    if (deferred) {
+      applySizing(child, deferred.width, deferred.height);
+      deferredSizing.delete(child);
     }
   }
 
@@ -167,8 +168,9 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
     }
 
     // Store sizing spec — will be applied after appendChild
-    (instance as any).__deferredWidth = spec.width;
-    (instance as any).__deferredHeight = spec.height;
+    if (spec.width || spec.height) {
+      deferredSizing.set(instance, { width: spec.width, height: spec.height });
+    }
 
     return instance;
   } catch (err) {
@@ -200,17 +202,10 @@ figma.ui.onmessage = async (msg: any) => {
     if (root) {
       figma.currentPage.appendChild(root);
       // Apply deferred sizing on root if needed
-      const dw = (root as any).__deferredWidth;
-      const dh = (root as any).__deferredHeight;
-      if (dw || dh) {
-        applySizing(root, dw, dh);
-      }
-      // Apply frame-level FILL sizing that was deferred
-      if ('type' in spec && (spec as SpecFrame).width === 'fill') {
-        (root as any).layoutSizingHorizontal = 'FILL';
-      }
-      if ('type' in spec && (spec as SpecFrame).height === 'fill') {
-        (root as any).layoutSizingVertical = 'FILL';
+      const deferred = deferredSizing.get(root);
+      if (deferred) {
+        applySizing(root, deferred.width, deferred.height);
+        deferredSizing.delete(root);
       }
       figma.viewport.scrollAndZoomIntoView([root]);
       figma.ui.postMessage({
