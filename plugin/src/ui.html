@@ -1,211 +1,340 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; font-size: 13px; color: #333; padding: 16px; }
-    h1 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-    .subtitle { font-size: 11px; color: #888; margin-bottom: 16px; }
-    label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px; }
-    input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
-    input:focus { outline: none; border-color: #0550dc; }
-    .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
-    .btn-primary { background: #0550dc; color: white; }
-    .btn-primary:hover { background: #0440b0; }
-    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-    .btn-cancel { background: #f5f5f5; color: #666; margin-top: 8px; }
-    .btn-cancel:hover { background: #eee; }
-    .hidden { display: none; }
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, system-ui, sans-serif; font-size: 13px; color: #333; padding: 16px; }
+h1 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.subtitle { font-size: 11px; color: #888; margin-bottom: 12px; }
+label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px; }
+input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
+input[type="text"]:focus { outline: none; border-color: #0550dc; }
+.btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.btn-primary { background: #0550dc; color: white; }
+.btn-primary:hover { background: #0440b0; }
+.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+.btn-cancel { background: #f5f5f5; color: #666; margin-top: 8px; }
+.btn-cancel:hover { background: #eee; }
+.hidden { display: none; }
 
-    .status-bar { margin-top: 12px; padding: 8px 10px; background: #f5f5fa; border-radius: 6px; font-size: 11px; color: #555; }
-    .status-bar.loaded { background: #f0ffec; color: #047800; }
-    .status-bar.error { background: #fcf3f3; color: #c10c0d; }
+/* Tabs */
+.tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid #eee; }
+.tab { padding: 8px 14px; font-size: 12px; font-weight: 500; color: #888; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; }
+.tab:hover { color: #555; }
+.tab--active { color: #0550dc; border-bottom-color: #0550dc; }
+.panel { display: none; }
+.panel--active { display: block; }
 
-    .progress-container { margin-top: 12px; }
-    .progress-bar { height: 4px; background: #eee; border-radius: 2px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #0550dc; border-radius: 2px; width: 0%; transition: width 0.15s; }
-    .progress-text { font-size: 11px; color: #888; margin-top: 4px; }
+/* Status & progress */
+.status-bar { margin-top: 12px; padding: 8px 10px; background: #f5f5fa; border-radius: 6px; font-size: 11px; color: #555; }
+.status-bar.loaded { background: #f0ffec; color: #047800; }
+.status-bar.error { background: #fcf3f3; color: #c10c0d; }
+.progress-container { margin-top: 12px; }
+.progress-bar { height: 4px; background: #eee; border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: #0550dc; border-radius: 2px; width: 0%; transition: width 0.15s; }
+.progress-text { font-size: 11px; color: #888; margin-top: 4px; }
 
-    #log { margin-top: 12px; max-height: 160px; overflow-y: auto; font-family: monospace; font-size: 10px; line-height: 1.5; color: #888; }
-    .log-error { color: #c10c0d; }
-    .log-success { color: #047800; }
+/* Log */
+#log { margin-top: 12px; max-height: 140px; overflow-y: auto; font-family: monospace; font-size: 10px; line-height: 1.5; color: #888; }
+.log-error { color: #c10c0d; }
+.log-success { color: #047800; }
 
-    .section { margin-bottom: 16px; }
-    .how-to { background: #f5f5fa; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 11px; line-height: 1.5; color: #555; }
-    .how-to strong { color: #333; }
-    .how-to ol { margin: 4px 0 0 16px; padding: 0; }
-    .how-to code { background: #e8e8f0; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
-  </style>
+/* Sections */
+.section { margin-bottom: 16px; }
+.radio-group { display: flex; gap: 12px; margin-bottom: 12px; }
+.radio-group label { display: flex; align-items: center; gap: 4px; font-weight: 400; cursor: pointer; }
+</style>
 </head>
 <body>
-  <h1>DS Assembler</h1>
-  <div class="subtitle">Assemble real component instances from JSON layout specs</div>
 
-  <div class="how-to">
-    <strong>How to use:</strong>
-    <ol>
-      <li>Serve your registry, tokens, and spec: <code>python3 serve.py 8765</code></li>
-      <li>Click <strong>Load Registry</strong> to connect</li>
-      <li>Click <strong>Assemble</strong> to build</li>
-    </ol>
+<h1>DS Assembler</h1>
+<div class="subtitle">Assemble, analyze, and update Figma designs</div>
+
+<!-- Registry connection (always visible) -->
+<div class="section">
+  <label>Base URL</label>
+  <input id="baseUrl" type="text" value="http://localhost:8765" />
+  <button class="btn btn-primary" id="loadBtn" onclick="handleLoadRegistry()">Load Registry</button>
+  <div id="registryStatus" class="status-bar hidden"></div>
+</div>
+
+<!-- Tabs (visible after registry loads) -->
+<div id="mainUI" class="hidden">
+  <div class="tabs">
+    <button class="tab tab--active" data-tab="assemble" onclick="switchTab('assemble')">Assemble</button>
+    <button class="tab" data-tab="analyze" onclick="switchTab('analyze')">Analyze</button>
+    <button class="tab" data-tab="update" onclick="switchTab('update')">Update</button>
   </div>
 
-  <div class="section">
-    <label>Base URL</label>
-    <input id="baseUrl" type="text" value="http://localhost:8765" placeholder="http://localhost:8765" />
-    <button class="btn btn-primary" id="loadBtn" onclick="handleLoadRegistry()">Load Registry</button>
-    <div id="registryStatus" class="status-bar hidden"></div>
-  </div>
-
-  <div id="assembleSection" class="section hidden">
+  <!-- Assemble panel -->
+  <div id="assemblePanel" class="panel panel--active">
     <label>Spec file</label>
     <input id="specFile" type="text" value="spec.json" placeholder="spec.json" />
     <button class="btn btn-primary" id="assembleBtn" onclick="handleAssemble()">Assemble</button>
-    <button class="btn btn-cancel hidden" id="cancelBtn" onclick="handleCancel()">Cancel</button>
-
-    <div id="progressContainer" class="progress-container hidden">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-      <div class="progress-text" id="progressText"></div>
+    <button class="btn btn-cancel hidden" id="assembleCancelBtn" onclick="handleCancel()">Cancel</button>
+    <div id="assembleProgress" class="progress-container hidden">
+      <div class="progress-bar"><div class="progress-fill" id="assembleFill"></div></div>
+      <div class="progress-text" id="assembleText"></div>
     </div>
   </div>
 
-  <div id="log"></div>
+  <!-- Analyze panel -->
+  <div id="analyzePanel" class="panel">
+    <label>Scope</label>
+    <div class="radio-group">
+      <label><input type="radio" name="scope" value="page" checked> Current page</label>
+      <label><input type="radio" name="scope" value="file"> Entire file</label>
+    </div>
+    <button class="btn btn-primary" id="analyzeBtn" onclick="handleAnalyze()">Analyze</button>
+    <button class="btn btn-cancel hidden" id="analyzeCancelBtn" onclick="handleCancel()">Cancel</button>
+    <div id="analyzeProgress" class="progress-container hidden">
+      <div class="progress-bar"><div class="progress-fill" id="analyzeFill"></div></div>
+      <div class="progress-text" id="analyzeText"></div>
+    </div>
+    <div id="analyzeSummary" class="status-bar hidden"></div>
+  </div>
 
-  <script>
-    const logEl = document.getElementById('log');
-    const loadBtn = document.getElementById('loadBtn');
-    const assembleBtn = document.getElementById('assembleBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const registryStatus = document.getElementById('registryStatus');
-    const assembleSection = document.getElementById('assembleSection');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
+  <!-- Update panel -->
+  <div id="updatePanel" class="panel">
+    <button class="btn btn-primary" id="loadUpdatesBtn" onclick="handleLoadUpdates()">Load Updates</button>
+    <div id="updatePreview" class="status-bar hidden"></div>
+    <button class="btn btn-primary hidden" id="applyBtn" onclick="handleApplyUpdates()" style="margin-top:8px">Apply Updates</button>
+    <button class="btn btn-cancel hidden" id="updateCancelBtn" onclick="handleCancel()">Cancel</button>
+    <div id="updateProgress" class="progress-container hidden">
+      <div class="progress-bar"><div class="progress-fill" id="updateFill"></div></div>
+      <div class="progress-text" id="updateText"></div>
+    </div>
+  </div>
+</div>
 
-    function log(msg, type) {
-      const div = document.createElement('div');
-      div.textContent = msg;
-      if (type) div.className = 'log-' + type;
-      logEl.appendChild(div);
-      logEl.scrollTop = logEl.scrollHeight;
-    }
+<div id="log"></div>
 
-    function showStatus(el, text, type) {
-      el.textContent = text;
-      el.className = 'status-bar ' + (type || '');
-      el.classList.remove('hidden');
-    }
+<script>
+const logEl = document.getElementById('log');
+let _updatePlan = null;
 
-    async function handleLoadRegistry() {
-      const baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
-      loadBtn.disabled = true;
-      loadBtn.textContent = 'Loading...';
-      logEl.innerHTML = '';
+function log(msg, type) {
+  const div = document.createElement('div');
+  div.textContent = msg;
+  if (type) div.className = 'log-' + type;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
 
-      try {
-        log('Fetching registry from ' + baseUrl + '/registry/component-registry.json...');
-        const [regRes, tokRes] = await Promise.all([
-          fetch(baseUrl + '/registry/component-registry.json'),
-          fetch(baseUrl + '/registry/token-map.json').catch(() => null)
-        ]);
+function showStatus(el, text, type) {
+  el.textContent = text;
+  el.className = 'status-bar ' + (type || '');
+  el.classList.remove('hidden');
+}
 
-        if (!regRes.ok) throw new Error('Registry: HTTP ' + regRes.status);
-        const registry = await regRes.json();
-        const tokenMap = tokRes && tokRes.ok ? await tokRes.json() : {};
+function getBaseUrl() {
+  return document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+}
 
-        log('Registry loaded. Sending to plugin...');
-        parent.postMessage({ pluginMessage: { type: 'load-registry', registry, tokenMap } }, '*');
-      } catch (err) {
-        log('Failed: ' + err.message, 'error');
-        showStatus(registryStatus, 'Failed to load registry: ' + err.message, 'error');
-        loadBtn.disabled = false;
-        loadBtn.textContent = 'Load Registry';
-      }
-    }
+// ── Tabs ──────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('panel--active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('tab--active');
+  document.getElementById(tab + 'Panel').classList.add('panel--active');
+  logEl.innerHTML = '';
+}
 
-    async function handleAssemble() {
-      const baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
-      const specFile = document.getElementById('specFile').value.trim();
-      const specUrl = baseUrl + '/' + specFile;
+// ── Registry ──────────────────────────────────────────────
+async function handleLoadRegistry() {
+  const baseUrl = getBaseUrl();
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+  logEl.innerHTML = '';
 
-      assembleBtn.disabled = true;
-      assembleBtn.textContent = 'Assembling...';
-      cancelBtn.classList.remove('hidden');
-      progressContainer.classList.remove('hidden');
-      progressFill.style.width = '0%';
-      progressText.textContent = 'Starting...';
+  try {
+    const [regRes, tokRes] = await Promise.all([
+      fetch(baseUrl + '/registry/component-registry.json'),
+      fetch(baseUrl + '/registry/token-map.json').catch(() => null)
+    ]);
+    if (!regRes.ok) throw new Error('Registry: HTTP ' + regRes.status);
+    const registry = await regRes.json();
+    const tokenMap = tokRes && tokRes.ok ? await tokRes.json() : {};
+    parent.postMessage({ pluginMessage: { type: 'load-registry', registry, tokenMap } }, '*');
+  } catch (err) {
+    log('Failed: ' + err.message, 'error');
+    showStatus(document.getElementById('registryStatus'), 'Failed: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Load Registry';
+  }
+}
 
-      try {
-        log('Fetching spec from ' + specUrl + '...');
-        const res = await fetch(specUrl);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const spec = await res.json();
-        log('Spec loaded. Assembling...');
-        parent.postMessage({ pluginMessage: { type: 'assemble', spec } }, '*');
-      } catch (err) {
-        log('Failed to fetch spec: ' + err.message, 'error');
-        resetAssembleUI();
-      }
-    }
+// ── Assemble ──────────────────────────────────────────────
+async function handleAssemble() {
+  const specUrl = getBaseUrl() + '/' + document.getElementById('specFile').value.trim();
+  const btn = document.getElementById('assembleBtn');
+  btn.disabled = true; btn.textContent = 'Assembling...';
+  document.getElementById('assembleCancelBtn').classList.remove('hidden');
+  document.getElementById('assembleProgress').classList.remove('hidden');
+  document.getElementById('assembleFill').style.width = '0%';
 
-    function handleCancel() {
-      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
-      log('Cancelling...', 'error');
-    }
+  try {
+    const res = await fetch(specUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const spec = await res.json();
+    parent.postMessage({ pluginMessage: { type: 'assemble', spec } }, '*');
+  } catch (err) {
+    log('Failed: ' + err.message, 'error');
+    resetAssemble();
+  }
+}
 
-    function resetAssembleUI() {
-      assembleBtn.disabled = false;
-      assembleBtn.textContent = 'Assemble';
-      cancelBtn.classList.add('hidden');
-      progressContainer.classList.add('hidden');
-    }
+function resetAssemble() {
+  const btn = document.getElementById('assembleBtn');
+  btn.disabled = false; btn.textContent = 'Assemble';
+  document.getElementById('assembleCancelBtn').classList.add('hidden');
+  document.getElementById('assembleProgress').classList.add('hidden');
+}
 
-    onmessage = (event) => {
-      const msg = event.data.pluginMessage;
-      if (!msg) return;
+// ── Analyze ───────────────────────────────────────────────
+function handleAnalyze() {
+  const scope = document.querySelector('input[name="scope"]:checked').value;
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  document.getElementById('analyzeCancelBtn').classList.remove('hidden');
+  document.getElementById('analyzeProgress').classList.remove('hidden');
+  document.getElementById('analyzeFill').style.width = '0%';
+  logEl.innerHTML = '';
+  parent.postMessage({ pluginMessage: { type: 'analyze', scope } }, '*');
+}
 
-      if (msg.type === 'log') log(msg.text, msg.level);
+function resetAnalyze() {
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = false; btn.textContent = 'Analyze';
+  document.getElementById('analyzeCancelBtn').classList.add('hidden');
+  document.getElementById('analyzeProgress').classList.add('hidden');
+}
 
-      if (msg.type === 'registry-loaded') {
-        showStatus(registryStatus, 'Registry: ' + msg.components + ' components, ' + msg.tokens + ' tokens', 'loaded');
-        assembleSection.classList.remove('hidden');
-        loadBtn.disabled = false;
-        loadBtn.textContent = 'Load Registry';
-      }
+// ── Update ────────────────────────────────────────────────
+async function handleLoadUpdates() {
+  const btn = document.getElementById('loadUpdatesBtn');
+  btn.disabled = true; btn.textContent = 'Loading...';
+  try {
+    const res = await fetch(getBaseUrl() + '/updates.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    _updatePlan = await res.json();
+    const count = _updatePlan.updates ? _updatePlan.updates.length : 0;
+    showStatus(document.getElementById('updatePreview'), count + ' updates loaded', 'loaded');
+    document.getElementById('applyBtn').classList.remove('hidden');
+    _updatePlan.updates.forEach(u => log(u.action + ': ' + u.nodeId + (u.componentName ? ' → ' + u.componentName : '')));
+  } catch (err) {
+    log('Failed: ' + err.message, 'error');
+    showStatus(document.getElementById('updatePreview'), 'No updates.json found. Run /design-audit first.', 'error');
+  }
+  btn.disabled = false; btn.textContent = 'Load Updates';
+}
 
-      if (msg.type === 'phase') {
-        progressFill.style.width = '0%';
-        if (msg.phase === 'importing') {
-          progressText.textContent = 'Importing ' + msg.total + ' unique components...';
-        } else {
-          progressText.textContent = 'Assembling ' + msg.total + ' nodes...';
-        }
-      }
+function handleApplyUpdates() {
+  if (!_updatePlan) return;
+  const btn = document.getElementById('applyBtn');
+  btn.disabled = true; btn.textContent = 'Applying...';
+  document.getElementById('updateCancelBtn').classList.remove('hidden');
+  document.getElementById('updateProgress').classList.remove('hidden');
+  document.getElementById('updateFill').style.width = '0%';
+  parent.postMessage({ pluginMessage: { type: 'apply-updates', plan: _updatePlan } }, '*');
+}
 
-      if (msg.type === 'import-progress') {
-        const pct = Math.round((msg.current / msg.total) * 50);
-        progressFill.style.width = pct + '%';
-        progressText.textContent = 'Importing components: ' + msg.current + '/' + msg.total;
-      }
+function resetUpdate() {
+  const btn = document.getElementById('applyBtn');
+  btn.disabled = false; btn.textContent = 'Apply Updates';
+  document.getElementById('updateCancelBtn').classList.add('hidden');
+  document.getElementById('updateProgress').classList.add('hidden');
+}
 
-      if (msg.type === 'progress') {
-        const pct = 50 + Math.round((msg.current / msg.total) * 50);
-        progressFill.style.width = pct + '%';
-        progressText.textContent = 'Assembling: ' + msg.current + '/' + msg.total + ' nodes';
-      }
+// ── Cancel ────────────────────────────────────────────────
+function handleCancel() {
+  parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+  log('Cancelling...', 'error');
+}
 
-      if (msg.type === 'done') {
-        progressFill.style.width = '100%';
-        progressText.textContent = '';
-        log(msg.text, 'success');
-        resetAssembleUI();
-      }
+// ── Message handler ───────────────────────────────────────
+onmessage = (event) => {
+  const msg = event.data.pluginMessage;
+  if (!msg) return;
 
-      if (msg.type === 'error') {
-        log(msg.text, 'error');
-        resetAssembleUI();
-      }
-    };
-  </script>
+  if (msg.type === 'log') log(msg.text, msg.level);
+
+  // Registry
+  if (msg.type === 'registry-loaded') {
+    showStatus(document.getElementById('registryStatus'),
+      'Registry: ' + msg.components + ' components, ' + msg.tokens + ' tokens', 'loaded');
+    document.getElementById('mainUI').classList.remove('hidden');
+    document.getElementById('loadBtn').disabled = false;
+    document.getElementById('loadBtn').textContent = 'Load Registry';
+  }
+
+  // Assemble progress
+  if (msg.type === 'phase') {
+    document.getElementById('assembleFill').style.width = '0%';
+    document.getElementById('assembleText').textContent =
+      msg.phase === 'importing' ? 'Importing ' + msg.total + ' components...' : 'Assembling ' + msg.total + ' nodes...';
+  }
+  if (msg.type === 'import-progress') {
+    document.getElementById('assembleFill').style.width = Math.round((msg.current / msg.total) * 50) + '%';
+    document.getElementById('assembleText').textContent = 'Importing: ' + msg.current + '/' + msg.total;
+  }
+  if (msg.type === 'progress') {
+    document.getElementById('assembleFill').style.width = (50 + Math.round((msg.current / msg.total) * 50)) + '%';
+    document.getElementById('assembleText').textContent = 'Assembling: ' + msg.current + '/' + msg.total;
+  }
+  if (msg.type === 'done') {
+    document.getElementById('assembleFill').style.width = '100%';
+    log(msg.text, 'success');
+    resetAssemble();
+  }
+
+  // Analyze progress
+  if (msg.type === 'analysis-progress') {
+    document.getElementById('analyzeFill').style.width = Math.round((msg.current / msg.total) * 100) + '%';
+    document.getElementById('analyzeText').textContent = 'Scanning: ' + msg.current + '/' + msg.total + ' nodes';
+  }
+  if (msg.type === 'analysis-done') {
+    document.getElementById('analyzeFill').style.width = '100%';
+    const r = msg.result;
+    const summary = `${r.stats.totalNodes} nodes, ${r.stats.instances} instances, ${r.stats.uniqueComponents} unique components, ${r.issues.length} issues`;
+    showStatus(document.getElementById('analyzeSummary'), summary, r.issues.length > 0 ? '' : 'loaded');
+    log('Analysis complete: ' + summary, 'success');
+    resetAnalyze();
+    // POST to server
+    fetch(getBaseUrl() + '/analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(r)
+    }).then(() => log('Analysis saved to server', 'success'))
+      .catch(err => log('Failed to save: ' + err.message, 'error'));
+  }
+
+  // Update progress
+  if (msg.type === 'update-progress') {
+    document.getElementById('updateFill').style.width = Math.round((msg.current / msg.total) * 100) + '%';
+    document.getElementById('updateText').textContent = 'Applying: ' + msg.current + '/' + msg.total;
+  }
+  if (msg.type === 'update-done') {
+    document.getElementById('updateFill').style.width = '100%';
+    const r = msg.result;
+    log(`Done: ${r.applied} applied, ${r.failed} failed, ${r.skipped} skipped`, 'success');
+    resetUpdate();
+    fetch(getBaseUrl() + '/update-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(r)
+    }).catch(() => {});
+  }
+
+  // Errors
+  if (msg.type === 'error') {
+    log(msg.text, 'error');
+    resetAssemble();
+    resetAnalyze();
+    resetUpdate();
+  }
+};
+</script>
 </body>
 </html>
