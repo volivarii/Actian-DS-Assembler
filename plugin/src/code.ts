@@ -1,43 +1,7 @@
 // DS Assembler — Generic Figma plugin for assembling component instances from JSON specs
 // Registry and token map are loaded at runtime from URLs, not bundled.
 
-interface ComponentEntry {
-  key: string;
-  library: string;
-  variants: Record<string, string[]>;
-  variantShortNames: Record<string, string>;
-  textProperties: string[];
-}
-
-interface Registry {
-  meta: { generatedAt: string; libraries: Record<string, any> };
-  components: Record<string, ComponentEntry>;
-}
-
-interface SpecFrame {
-  type: 'frame';
-  name?: string;
-  layout: 'vertical' | 'horizontal';
-  spacing?: number;
-  padding?: { top: number; right: number; bottom: number; left: number };
-  fill?: string;
-  width?: number | 'hug' | 'fill';
-  height?: number | 'hug' | 'fill';
-  align?: 'min' | 'center' | 'max' | 'space-between';
-  counterAlign?: 'min' | 'center' | 'max';
-  cornerRadius?: number;
-  children: SpecNode[];
-}
-
-interface SpecInstance {
-  component: string;
-  props?: Record<string, string>;
-  text?: Record<string, string>;
-  width?: number | 'hug' | 'fill';
-  height?: number | 'hug' | 'fill';
-}
-
-type SpecNode = SpecFrame | SpecInstance;
+import { ComponentEntry, Registry, SpecFrame, SpecInstance, SpecNode } from './types';
 
 // ── State ────────────────────────────────────────────────────
 let registry: Registry | null = null;
