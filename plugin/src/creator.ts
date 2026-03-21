@@ -138,6 +138,40 @@ function applyHeight(node: SceneNode, height: number | 'hug' | 'fill' | undefine
   }
 }
 
+// ── Deferred FILL sizing ─────────────────────────────────────
+var deferredFills = new Map<SceneNode, { fillWidth: boolean; fillHeight: boolean }>();
+
+function deferOrApplyWidth(node: SceneNode, width: number | 'hug' | 'fill' | undefined) {
+  if (width === 'fill') {
+    var existing = deferredFills.get(node) || { fillWidth: false, fillHeight: false };
+    existing.fillWidth = true;
+    deferredFills.set(node, existing);
+  } else {
+    applyWidth(node, width);
+  }
+}
+
+function deferOrApplyHeight(node: SceneNode, height: number | 'hug' | 'fill' | undefined) {
+  if (height === 'fill') {
+    var existing = deferredFills.get(node) || { fillWidth: false, fillHeight: false };
+    existing.fillHeight = true;
+    deferredFills.set(node, existing);
+  } else {
+    applyHeight(node, height);
+  }
+}
+
+function applyDeferredFills(children: SceneNode[]) {
+  for (var i = 0; i < children.length; i++) {
+    var deferred = deferredFills.get(children[i]);
+    if (deferred) {
+      if (deferred.fillWidth) applyWidth(children[i], 'fill');
+      if (deferred.fillHeight) applyHeight(children[i], 'fill');
+      deferredFills.delete(children[i]);
+    }
+  }
+}
+
 // ── Create text node ─────────────────────────────────────────
 async function createTextNode(spec: ComponentChildNode, library?: string): Promise<TextNode> {
   var node = figma.createText();
@@ -228,8 +262,8 @@ async function buildChildNode(spec: ComponentChildNode, library?: string): Promi
         }
       }
 
-      applyWidth(instance, spec.width);
-      applyHeight(instance, spec.height);
+      deferOrApplyWidth(instance, spec.width);
+      deferOrApplyHeight(instance, spec.height);
 
       return instance;
     } catch (err) {
@@ -274,17 +308,23 @@ async function buildChildNode(spec: ComponentChildNode, library?: string): Promi
   }
 
   // Build children
+  var childNodes: SceneNode[] = [];
   if (spec.children) {
     for (var ci = 0; ci < spec.children.length; ci++) {
       var childNode = await buildChildNode(spec.children[ci], library);
       if (childNode) {
         frame.appendChild(childNode);
+        childNodes.push(childNode);
       }
     }
   }
 
-  applyWidth(frame, spec.width);
-  applyHeight(frame, spec.height);
+  // Apply deferred FILL on children now in auto-layout
+  applyDeferredFills(childNodes);
+
+  // Defer own FILL, apply others immediately
+  deferOrApplyWidth(frame, spec.width);
+  deferOrApplyHeight(frame, spec.height);
 
   return frame;
 }
@@ -326,6 +366,7 @@ async function buildVariant(
   }
 
   // Build children and track text properties
+  var variantChildren: SceneNode[] = [];
   var textPropIndex = 0;
   for (var i = 0; i < def.children.length; i++) {
     var childSpec = def.children[i];
@@ -333,6 +374,7 @@ async function buildVariant(
     if (!childNode) continue;
 
     comp.appendChild(childNode);
+    variantChildren.push(childNode);
 
     // Expose text nodes marked as properties
     if (childSpec.type === 'text' && childSpec.isProperty && childNode.type === 'TEXT') {
@@ -349,7 +391,10 @@ async function buildVariant(
     }
   }
 
-  // Apply sizing
+  // Apply deferred FILL on children now in auto-layout
+  applyDeferredFills(variantChildren);
+
+  // Apply sizing on the component itself
   if (def.width !== undefined) applyWidth(comp, def.width);
   if (def.height !== undefined) applyHeight(comp, def.height);
 
