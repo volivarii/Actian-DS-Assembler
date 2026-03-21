@@ -1,9 +1,10 @@
 // DS Assembler — Generic Figma plugin for assembling component instances from JSON specs
 // Registry and token map are loaded at runtime from URLs, not bundled.
 
-import { ComponentEntry, Registry, SpecFrame, SpecInstance, SpecNode, UpdateInstruction } from './types';
+import { ComponentEntry, Registry, SpecFrame, SpecInstance, SpecNode, UpdateInstruction, ComponentSpec } from './types';
 import { setAnalyzerRegistry, cancelAnalysis, analyzeScope } from './analyzer';
 import { setUpdaterRegistry, cancelUpdate, applyUpdates } from './updater';
+import { createComponentFromSpec, setCreatorRegistry } from './creator';
 
 // ── State ────────────────────────────────────────────────────
 let registry: Registry | null = null;
@@ -283,6 +284,7 @@ figma.ui.onmessage = async (msg: any) => {
     tokenMap = msg.tokenMap || {};
     setAnalyzerRegistry(registry);
     setUpdaterRegistry(registry);
+    setCreatorRegistry(registry);
     const compCount = Object.keys(registry.components).length;
     const tokenCount = Object.keys(tokenMap).length;
     sendLog(`Registry: ${compCount} components, ${tokenCount} tokens`);
@@ -321,6 +323,20 @@ figma.ui.onmessage = async (msg: any) => {
       figma.ui.postMessage({ type: 'update-done', result });
     } catch (err) {
       figma.ui.postMessage({ type: 'error', text: `Updates failed: ${(err as Error).message}` });
+    }
+    return;
+  }
+
+  if (msg.type === 'create-component') {
+    var spec = msg.spec as ComponentSpec;
+    sendLog('Creating component from spec...');
+    try {
+      var result = await createComponentFromSpec(spec);
+      figma.currentPage.appendChild(result);
+      figma.viewport.scrollAndZoomIntoView([result]);
+      figma.ui.postMessage({ type: 'create-done', text: 'Component created: ' + spec.name });
+    } catch (err) {
+      figma.ui.postMessage({ type: 'error', text: 'Create failed: ' + (err as Error).message });
     }
     return;
   }
