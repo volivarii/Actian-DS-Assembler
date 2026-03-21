@@ -64,6 +64,7 @@ input[type="text"]:focus { outline: none; border-color: #0550dc; }
     <button class="tab tab--active" data-tab="assemble" onclick="switchTab('assemble')">Assemble</button>
     <button class="tab" data-tab="analyze" onclick="switchTab('analyze')">Analyze</button>
     <button class="tab" data-tab="update" onclick="switchTab('update')">Update</button>
+    <button class="tab" data-tab="create" onclick="switchTab('create')">Create</button>
   </div>
 
   <!-- Assemble panel -->
@@ -104,6 +105,14 @@ input[type="text"]:focus { outline: none; border-color: #0550dc; }
       <div class="progress-bar"><div class="progress-fill" id="updateFill"></div></div>
       <div class="progress-text" id="updateText"></div>
     </div>
+  </div>
+
+  <!-- Create panel -->
+  <div id="createPanel" class="panel">
+    <label>Component spec file</label>
+    <input id="createSpecFile" type="text" value="component-spec.json" placeholder="component-spec.json" />
+    <button class="btn btn-primary" id="createBtn" onclick="handleCreate()">Create Component</button>
+    <div id="createProgress" class="status-bar hidden"></div>
   </div>
 </div>
 
@@ -247,6 +256,33 @@ function resetUpdate() {
   document.getElementById('updateProgress').classList.add('hidden');
 }
 
+// ── Create ────────────────────────────────────────────────
+async function handleCreate() {
+  var specUrl = getBaseUrl() + '/' + document.getElementById('createSpecFile').value.trim();
+  var btn = document.getElementById('createBtn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  showStatus(document.getElementById('createProgress'), 'Loading spec...', '');
+  logEl.innerHTML = '';
+
+  try {
+    var res = await fetch(specUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var spec = await res.json();
+    showStatus(document.getElementById('createProgress'), 'Building component...', '');
+    parent.postMessage({ pluginMessage: { type: 'create-component', spec: spec } }, '*');
+  } catch (err) {
+    log('Failed: ' + err.message, 'error');
+    showStatus(document.getElementById('createProgress'), 'Failed: ' + err.message, 'error');
+    btn.disabled = false; btn.textContent = 'Create Component';
+  }
+}
+
+function resetCreate() {
+  var btn = document.getElementById('createBtn');
+  btn.disabled = false; btn.textContent = 'Create Component';
+  document.getElementById('createProgress').classList.add('hidden');
+}
+
 // ── Cancel ────────────────────────────────────────────────
 function handleCancel() {
   parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
@@ -327,12 +363,21 @@ onmessage = (event) => {
     }).catch(() => {});
   }
 
+  // Create done
+  if (msg.type === 'create-done') {
+    showStatus(document.getElementById('createProgress'), msg.text, 'loaded');
+    log(msg.text, 'success');
+    var createBtn = document.getElementById('createBtn');
+    createBtn.disabled = false; createBtn.textContent = 'Create Component';
+  }
+
   // Errors
   if (msg.type === 'error') {
     log(msg.text, 'error');
     resetAssemble();
     resetAnalyze();
     resetUpdate();
+    resetCreate();
   }
 };
 </script>
