@@ -6,3 +6,8 @@ plugin/dist/
 # Generated spec files (created by Claude, served temporarily)
 spec*.json
 test-spec*.json
+
+# Generated analysis/update files (created by plugin, served temporarily)
+analysis.json
+update-result.json
+updates.json
