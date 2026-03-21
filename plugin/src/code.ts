@@ -1,7 +1,9 @@
 // DS Assembler — Generic Figma plugin for assembling component instances from JSON specs
 // Registry and token map are loaded at runtime from URLs, not bundled.
 
-import { ComponentEntry, Registry, SpecFrame, SpecInstance, SpecNode } from './types';
+import { ComponentEntry, Registry, SpecFrame, SpecInstance, SpecNode, UpdateInstruction } from './types';
+import { setAnalyzerRegistry, cancelAnalysis, analyzeScope } from './analyzer';
+import { setUpdaterRegistry, cancelUpdate, applyUpdates } from './updater';
 
 // ── State ────────────────────────────────────────────────────
 let registry: Registry | null = null;
@@ -271,16 +273,55 @@ figma.showUI(__html__, { width: 380, height: 520 });
 figma.ui.onmessage = async (msg: any) => {
   if (msg.type === 'cancel') {
     abortRequested = true;
+    cancelAnalysis();
+    cancelUpdate();
     return;
   }
 
   if (msg.type === 'load-registry') {
     registry = msg.registry as Registry;
     tokenMap = msg.tokenMap || {};
+    setAnalyzerRegistry(registry);
+    setUpdaterRegistry(registry);
     const compCount = Object.keys(registry.components).length;
     const tokenCount = Object.keys(tokenMap).length;
     sendLog(`Registry: ${compCount} components, ${tokenCount} tokens`);
     figma.ui.postMessage({ type: 'registry-loaded', components: compCount, tokens: tokenCount });
+    return;
+  }
+
+  if (msg.type === 'analyze') {
+    const scope: 'page' | 'file' = msg.scope || 'page';
+    sendLog(`Starting analysis (scope: ${scope})...`);
+    figma.ui.postMessage({ type: 'phase', phase: 'analyzing' });
+
+    try {
+      const result = await analyzeScope(scope);
+      sendLog(`Analysis complete: ${result.stats.instances} instances, ${result.issues.length} issues`);
+      figma.ui.postMessage({ type: 'analysis-done', result });
+    } catch (err) {
+      figma.ui.postMessage({ type: 'error', text: `Analysis failed: ${(err as Error).message}` });
+    }
+    return;
+  }
+
+  if (msg.type === 'apply-updates') {
+    const instructions = msg.instructions as UpdateInstruction[];
+    if (!instructions || instructions.length === 0) {
+      figma.ui.postMessage({ type: 'error', text: 'No update instructions provided.' });
+      return;
+    }
+
+    sendLog(`Applying ${instructions.length} updates...`);
+    figma.ui.postMessage({ type: 'phase', phase: 'updating', total: instructions.length });
+
+    try {
+      const result = await applyUpdates(instructions);
+      sendLog(`Updates complete: ${result.applied} applied, ${result.failed} failed, ${result.skipped} skipped (${result.durationMs}ms)`);
+      figma.ui.postMessage({ type: 'update-done', result });
+    } catch (err) {
+      figma.ui.postMessage({ type: 'error', text: `Updates failed: ${(err as Error).message}` });
+    }
     return;
   }
 
