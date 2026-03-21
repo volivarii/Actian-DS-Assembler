@@ -100,3 +100,48 @@ export interface UpdateResult {
   details: { nodeId: string; action: string; status: 'applied' | 'failed' | 'skipped'; message?: string }[];
   durationMs: number;
 }
+
+// ── Component Creator types ─────────────────────────────────
+export interface ComponentChildNode {
+  type?: 'frame' | 'text';
+  component?: string;
+  name?: string;
+  content?: string;
+  style?: string;
+  isProperty?: boolean;
+  props?: Record<string, string>;
+  text?: Record<string, string>;
+  layout?: 'vertical' | 'horizontal';
+  spacing?: number;
+  padding?: { top: number; right: number; bottom: number; left: number };
+  fill?: string;
+  width?: number | 'hug' | 'fill';
+  height?: number | 'hug' | 'fill';
+  align?: 'min' | 'center' | 'max' | 'space-between';
+  counterAlign?: 'min' | 'center' | 'max';
+  cornerRadius?: number;
+  children?: ComponentChildNode[];
+}
+
+export interface VariantDefinition {
+  variant: Record<string, string>;
+  layout: 'vertical' | 'horizontal';
+  width?: number | 'hug' | 'fill';
+  height?: number | 'hug' | 'fill';
+  spacing?: number;
+  padding?: { top: number; right: number; bottom: number; left: number };
+  align?: 'min' | 'center' | 'max' | 'space-between';
+  counterAlign?: 'min' | 'center' | 'max';
+  fill?: string;
+  children: ComponentChildNode[];
+}
+
+export interface ComponentSpec {
+  type: 'component';
+  name: string;
+  description?: string;
+  library?: 'fat-marker' | 'ds2026';
+  variants?: Record<string, string[]>;
+  defaultVariant?: Record<string, string>;
+  definitions: VariantDefinition[];
+}
