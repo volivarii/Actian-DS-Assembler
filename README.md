@@ -153,6 +153,41 @@ The registry maps component names to Figma component keys:
 }
 ```
 
+## Create
+
+Create new Figma components with variants from a JSON spec.
+
+1. Place a `component-spec.json` in the project root
+2. Open DS Assembler → **Create** tab
+3. Enter the spec filename → click **Create Component**
+4. The component (or component set with variants) appears on your canvas
+5. Publish to library when ready
+
+### Component spec format
+
+```json
+{
+  "type": "component",
+  "name": "My Component",
+  "description": "What it does.",
+  "library": "fat-marker",
+  "variants": { "Type": ["Default", "Active"] },
+  "definitions": [
+    {
+      "variant": { "Type": "Default" },
+      "layout": "horizontal",
+      "width": 600,
+      "children": [
+        { "type": "text", "name": "Label", "content": "Label", "style": "label-standard", "isProperty": true },
+        { "component": "FM Button", "props": { "Type": "Primary" } }
+      ]
+    }
+  ]
+}
+```
+
+Supports: text nodes with style, nested component instances, auto-layout frames, text properties exposed as editable component properties, `combineAsVariants` for multi-variant component sets.
+
 ## Server Endpoints
 
 `serve.py` provides:
