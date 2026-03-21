@@ -96,5 +96,7 @@ export interface UpdateResult {
   applied: number;
   failed: number;
   skipped: number;
+  errors: { nodeId: string; action: string; error: string }[];
   details: { nodeId: string; action: string; status: 'applied' | 'failed' | 'skipped'; message?: string }[];
+  durationMs: number;
 }
