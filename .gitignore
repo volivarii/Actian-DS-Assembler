@@ -11,3 +11,4 @@ test-spec*.json
 analysis.json
 update-result.json
 updates.json
+.superpowers/

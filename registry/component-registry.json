@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-03-21T16:01:28.100Z",
+    "generatedAt": "2026-03-22T22:46:05.971Z",
     "libraries": {
       "ds2026": {
         "fileKey": "l8biHxfarNi1I2RMvVxVOK",
@@ -8760,27 +8760,6 @@
         "Show label#176:18"
       ]
     },
-    "FM App_header": {
-      "key": "8fc9bcee610c7f8d22ebcc268467993f6dc99c87",
-      "library": "fat-marker",
-      "description": "",
-      "page": "Fat Marker",
-      "variants": {
-        "Type": [
-          "Admin",
-          "Explorer",
-          "Studio",
-          "Actian"
-        ]
-      },
-      "variantShortNames": {
-        "Type": "Type"
-      },
-      "textProperties": [],
-      "booleanProperties": [
-        "Show Context inputs#186:0"
-      ]
-    },
     "FM Table Cell": {
       "key": "9267fecfadc4577563deb1425fa598d1f5af9144",
       "library": "fat-marker",
@@ -8944,6 +8923,55 @@
       },
       "textProperties": [],
       "booleanProperties": []
+    },
+    "FM App_header": {
+      "key": "8fc9bcee610c7f8d22ebcc268467993f6dc99c87",
+      "library": "fat-marker",
+      "description": "Top-level application header bar. Contains the Actian logo, product label, and user avatar. Use at the top of every screen mockup.",
+      "page": "Fat Marker",
+      "variants": {
+        "Type": [
+          "Admin",
+          "Explorer",
+          "Studio",
+          "Actian"
+        ]
+      },
+      "variantShortNames": {
+        "Type": "Type"
+      },
+      "textProperties": [],
+      "booleanProperties": [
+        "Show Context inputs#186:0"
+      ]
+    },
+    "FM Input Label": {
+      "key": "a39aa1c7cb593f7d26b7659e4cbe4e419e00c766",
+      "library": "fat-marker",
+      "description": "",
+      "page": "Fat Marker",
+      "variants": {
+        "Disabled": [
+          "No",
+          "Yes"
+        ],
+        "Type": [
+          "Text",
+          "Placeholder"
+        ]
+      },
+      "variantShortNames": {
+        "Disabled": "Disabled",
+        "Type": "Type"
+      },
+      "textProperties": [
+        "Label Text#1555:11",
+        "Caption Text#1555:12"
+      ],
+      "booleanProperties": [
+        "Caption#1555:9",
+        "Required#1555:10"
+      ]
     },
     "currency-pound": {
       "key": "545b484b089f348b32829cf4387238bd67171f54",
@@ -9197,16 +9225,6 @@
     },
     "Size=md, Shape=Regular, Type=Outline, State=Disabled": {
       "key": "d4dbcd34635c2a4ccbf5acdeca166289619772a9",
-      "library": "fat-marker",
-      "description": "",
-      "page": "Fat Marker",
-      "variants": {},
-      "variantShortNames": {},
-      "textProperties": [],
-      "booleanProperties": []
-    },
-    "FM Side navigation bar": {
-      "key": "d4ee41767fdf094965b65ddd98c29376a9ac07ac",
       "library": "fat-marker",
       "description": "",
       "page": "Fat Marker",
@@ -9537,16 +9555,6 @@
     },
     "Completion=10%": {
       "key": "dd24925d5ba3ebf12434dba5abea7563c8970f11",
-      "library": "fat-marker",
-      "description": "",
-      "page": "Fat Marker",
-      "variants": {},
-      "variantShortNames": {},
-      "textProperties": [],
-      "booleanProperties": []
-    },
-    "Type=Actian": {
-      "key": "36e63e26399e2b29ec6686cd2a89083a2ab45f46",
       "library": "fat-marker",
       "description": "",
       "page": "Fat Marker",
@@ -12339,6 +12347,56 @@
       "key": "ae4cb8ae57725689509e57001cfaf83a28ee1c85",
       "library": "fat-marker",
       "description": "",
+      "page": "Fat Marker",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Disabled=Yes, Type=Text": {
+      "key": "2ded78ea011358d75882405bb9b9b1a99b979055",
+      "library": "fat-marker",
+      "description": "",
+      "page": "Fat Marker",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Type=Actian": {
+      "key": "36e63e26399e2b29ec6686cd2a89083a2ab45f46",
+      "library": "fat-marker",
+      "description": "",
+      "page": "Fat Marker",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Disabled=No, Type=Placeholder": {
+      "key": "b153c3b4da76258e6241c3bb1dc08af4ee0ebb8c",
+      "library": "fat-marker",
+      "description": "",
+      "page": "Fat Marker",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Disabled=No, Type=Text": {
+      "key": "c7077c062b20f62d9905ec55a26859b51d843928",
+      "library": "fat-marker",
+      "description": "",
+      "page": "Fat Marker",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "FM Side navigation bar": {
+      "key": "d4ee41767fdf094965b65ddd98c29376a9ac07ac",
+      "library": "fat-marker",
+      "description": "Vertical sidebar navigation panel (260px wide). Contains navigation items with placeholder labels and an active-state highlight. Use on the left side of every screen that has a persistent nav. Always pair with FM App_header above it.",
       "page": "Fat Marker",
       "variants": {},
       "variantShortNames": {},

@@ -12,6 +12,8 @@ class AssemblerHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', '*')
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.send_header('Pragma', 'no-cache')
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -37,6 +39,12 @@ class AssemblerHandler(http.server.SimpleHTTPRequestHandler):
             with open(filepath, 'w') as f:
                 json.dump(data, f, indent=2)
             print(f"[POST] Saved {self.path} -> {filepath} ({len(body)} bytes)")
+            # Clear stale updates when new analysis is posted
+            if self.path == '/analysis':
+                updates_path = os.path.join(DATA_DIR, 'updates.json')
+                if os.path.exists(updates_path):
+                    os.remove(updates_path)
+                    print(f"[POST] Cleared stale updates.json")
             self.send_response(200)
             self.end_headers()
             self.wfile.write(json.dumps({"status": "ok", "file": filename}).encode())

@@ -1,0 +1,14 @@
+{
+  "name": "actian-ds-assembler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Actian Design System Assembler — Figma plugin + registry sync",
+  "scripts": {
+    "serve": "python3 serve.py 8765",
+    "sync": "node registry/sync-all.js",
+    "sync:fm": "node registry/sync-all.js fm",
+    "sync:ds": "node registry/sync-all.js ds2026",
+    "build": "cd plugin && npm run build",
+    "dev": "npm run serve"
+  }
+}
