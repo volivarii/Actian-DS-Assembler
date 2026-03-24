@@ -318,9 +318,27 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
     if (boolOverrides) {
       for (const [shortName, value] of Object.entries(boolOverrides)) {
         // Find the full property name from registry booleanProperties
-        const fullName = (entry.booleanProperties || []).find(
+        // Match strategies: exact, strip emoji prefix, partial/endsWith
+        const boolProps = entry.booleanProperties || [];
+        let fullName = boolProps.find(
           (bp: string) => bp.split("#")[0].trim() === shortName,
         );
+        // Strip emoji prefix (e.g., "👁 Leading Icon" → "Leading Icon")
+        if (!fullName) {
+          fullName = boolProps.find((bp: string) => {
+            const clean = bp
+              .split("#")[0]
+              .trim()
+              .replace(/^[^\w\s]+\s*/, "");
+            return clean === shortName;
+          });
+        }
+        // Partial match (shortName appears in property name)
+        if (!fullName) {
+          fullName = boolProps.find((bp: string) =>
+            bp.toLowerCase().includes(shortName.toLowerCase()),
+          );
+        }
         if (fullName) {
           try {
             instance.setProperties({ [fullName]: value as boolean });
