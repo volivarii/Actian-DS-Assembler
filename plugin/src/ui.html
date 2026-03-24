@@ -320,10 +320,10 @@
         id="baseUrl"
         type="text"
         value=""
-        placeholder="https://raw.githubusercontent.com/your-org/your-repo/main"
+        placeholder="https://raw.githubusercontent.com/org/repo/main"
       />
       <div style="font-size: 11px; color: #717d96; margin: 4px 0 8px">
-        URL to a directory containing
+        Base URL of your DS Assembler repo. The plugin fetches
         <code
           style="
             font-size: 10px;
@@ -331,8 +331,20 @@
             padding: 1px 4px;
             border-radius: 3px;
           "
-          >registry/component-registry.json</code
-        >. Use a GitHub raw URL or
+          >/registry/component-registry.json</code
+        >
+        from this URL.<br />
+        GitHub:
+        <code
+          style="
+            font-size: 10px;
+            background: #f5f5fa;
+            padding: 1px 4px;
+            border-radius: 3px;
+          "
+          >https://raw.githubusercontent.com/org/repo/main</code
+        ><br />
+        Local:
         <code
           style="
             font-size: 10px;
@@ -342,7 +354,6 @@
           "
           >http://localhost:8765</code
         >
-        for local dev.
       </div>
       <button
         class="btn btn-primary"
