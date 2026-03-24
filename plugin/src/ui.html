@@ -320,40 +320,70 @@
         id="baseUrl"
         type="text"
         value=""
-        placeholder="https://raw.githubusercontent.com/org/repo/main"
+        placeholder="Paste your registry base URL here"
+        style="margin-bottom: 6px"
       />
-      <div style="font-size: 11px; color: #717d96; margin: 4px 0 8px">
-        Base URL of your DS Assembler repo. The plugin fetches
-        <code
-          style="
-            font-size: 10px;
-            background: #f5f5fa;
-            padding: 1px 4px;
-            border-radius: 3px;
-          "
-          >/registry/component-registry.json</code
-        >
-        from this URL.<br />
-        GitHub:
-        <code
-          style="
-            font-size: 10px;
-            background: #f5f5fa;
-            padding: 1px 4px;
-            border-radius: 3px;
-          "
-          >https://raw.githubusercontent.com/org/repo/main</code
-        ><br />
-        Local:
-        <code
-          style="
-            font-size: 10px;
-            background: #f5f5fa;
-            padding: 1px 4px;
-            border-radius: 3px;
-          "
-          >http://localhost:8765</code
-        >
+      <div
+        id="registryHelp"
+        style="
+          background: #f9fafb;
+          border: 1px solid #eee;
+          border-radius: 6px;
+          padding: 10px 12px;
+          margin-bottom: 10px;
+          font-size: 11px;
+          color: #475467;
+          line-height: 1.6;
+        "
+      >
+        <div style="font-weight: 600; color: #333; margin-bottom: 6px">
+          Connect to your component registry
+        </div>
+        <div style="margin-bottom: 8px">
+          Enter the base URL of your registry repo. The plugin loads
+          <span style="font-weight: 500; color: #333"
+            >/registry/component-registry.json</span
+          >
+          from this path.
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 6px">
+            <span
+              style="
+                background: #e8f0fe;
+                color: #0550dc;
+                font-size: 9px;
+                font-weight: 600;
+                padding: 2px 5px;
+                border-radius: 3px;
+                flex-shrink: 0;
+              "
+              >GITHUB</span
+            >
+            <code style="font-size: 10px; color: #333; word-break: break-all"
+              >https://raw.githubusercontent.com/<em style="color: #0550dc"
+                >org</em
+              >/<em style="color: #0550dc">repo</em>/main</code
+            >
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px">
+            <span
+              style="
+                background: #f0f0f0;
+                color: #555;
+                font-size: 9px;
+                font-weight: 600;
+                padding: 2px 5px;
+                border-radius: 3px;
+                flex-shrink: 0;
+              "
+              >LOCAL</span
+            >
+            <code style="font-size: 10px; color: #333"
+              >http://localhost:8765</code
+            >
+          </div>
+        </div>
       </div>
       <button
         class="btn btn-primary"
