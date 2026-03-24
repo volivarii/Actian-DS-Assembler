@@ -686,7 +686,9 @@
       // ── Assemble ──────────────────────────────────────────────
       async function handleAssemble() {
         const specUrl =
-          getServerUrl() + "/" + document.getElementById("specFile").value.trim();
+          getServerUrl() +
+          "/" +
+          document.getElementById("specFile").value.trim();
         const btn = document.getElementById("assembleBtn");
         btn.disabled = true;
         btn.textContent = "Assembling...";
@@ -694,8 +696,14 @@
         document.getElementById("assembleProgress").classList.remove("hidden");
         document.getElementById("assembleFill").style.width = "0%";
 
+        log("Fetching spec: " + specUrl);
         try {
-          const res = await fetch(specUrl);
+          var controller = new AbortController();
+          var timeoutId = setTimeout(function () {
+            controller.abort();
+          }, 10000);
+          const res = await fetch(specUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
           if (!res.ok) throw new Error("HTTP " + res.status);
           const spec = await res.json();
           parent.postMessage(
@@ -703,7 +711,13 @@
             "*",
           );
         } catch (err) {
-          log("Failed: " + err.message, "error");
+          var msg =
+            err.name === "AbortError"
+              ? "Timeout — server at " +
+                getServerUrl() +
+                " not responding. Is it running?"
+              : "Failed: " + err.message;
+          log(msg, "error");
           resetAssemble();
         }
       }
@@ -981,9 +995,15 @@
           "",
         );
         logEl.innerHTML = "";
+        log("Fetching spec: " + specUrl);
 
         try {
-          var res = await fetch(specUrl);
+          var createController = new AbortController();
+          var createTimeoutId = setTimeout(function () {
+            createController.abort();
+          }, 10000);
+          var res = await fetch(specUrl, { signal: createController.signal });
+          clearTimeout(createTimeoutId);
           if (!res.ok) throw new Error("HTTP " + res.status);
           var spec = await res.json();
           showStatus(
@@ -996,10 +1016,16 @@
             "*",
           );
         } catch (err) {
-          log("Failed: " + err.message, "error");
+          var createMsg =
+            err.name === "AbortError"
+              ? "Timeout — server at " +
+                getServerUrl() +
+                " not responding. Is it running?"
+              : "Failed: " + err.message;
+          log(createMsg, "error");
           showStatus(
             document.getElementById("createProgress"),
-            "Failed: " + err.message,
+            createMsg,
             "error",
           );
           btn.disabled = false;
