@@ -25,10 +25,26 @@ let totalNodes = 0;
 const componentCache = new Map<string, ComponentNode>();
 const componentSetCache = new Map<string, ComponentSetNode>();
 
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Timeout after ${ms}ms importing ${label}`)),
+        ms,
+      ),
+    ),
+  ]);
+}
+
 async function cachedImportComponent(key: string): Promise<ComponentNode> {
   let c = componentCache.get(key);
   if (!c) {
-    c = await figma.importComponentByKeyAsync(key);
+    c = await withTimeout(figma.importComponentByKeyAsync(key), 15000, key);
     componentCache.set(key, c);
   }
   return c;
@@ -39,7 +55,7 @@ async function cachedImportComponentSet(
 ): Promise<ComponentSetNode> {
   let cs = componentSetCache.get(key);
   if (!cs) {
-    cs = await figma.importComponentSetByKeyAsync(key);
+    cs = await withTimeout(figma.importComponentSetByKeyAsync(key), 15000, key);
     componentSetCache.set(key, cs);
   }
   return cs;

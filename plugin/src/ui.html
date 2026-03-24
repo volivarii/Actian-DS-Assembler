@@ -1044,6 +1044,14 @@
       function handleCancel() {
         parent.postMessage({ pluginMessage: { type: "cancel" } }, "*");
         log("Cancelling...", "error");
+        // Force-reset all UI states after a short delay
+        // (in case the plugin is stuck and never responds)
+        setTimeout(function () {
+          resetAssemble();
+          resetScan();
+          resetFixes();
+          resetCreate();
+        }, 2000);
       }
 
       // ── Helpers ───────────────────────────────────────────────
