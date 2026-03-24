@@ -1,6 +1,12 @@
 // DS Assembler — Analyzer: walks Figma document tree, detects instances and issues
 
-import { Registry, AnalysisResult, InstanceInfo, Issue, AnalysisStats } from './types';
+import {
+  Registry,
+  AnalysisResult,
+  InstanceInfo,
+  Issue,
+  AnalysisStats,
+} from "./types";
 
 let registry: Registry | null = null;
 let abortAnalysis = false;
@@ -18,7 +24,7 @@ export function cancelAnalysis() {
 // ── Helpers ──────────────────────────────────────────────────
 
 function yieldToMain(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 /** Build reverse map: componentKey -> componentName from registry. */
@@ -34,8 +40,8 @@ function buildKeyToName(): Map<string, string> {
 /** Count total traversable nodes in a subtree (skips instance internals). */
 function countTraversable(node: BaseNode): number {
   let count = 1;
-  if (node.type === 'INSTANCE') return count; // don't recurse into instances
-  if ('children' in node) {
+  if (node.type === "INSTANCE") return count; // don't recurse into instances
+  if ("children" in node) {
     for (const child of (node as ChildrenMixin).children) {
       count += countTraversable(child);
     }
@@ -44,23 +50,34 @@ function countTraversable(node: BaseNode): number {
 }
 
 /** Check if a solid fill is hardcoded (not bound to a variable). */
-function isHardcodedFill(node: SceneNode): { hardcoded: boolean; hex?: string } {
-  if (!('fills' in node)) return { hardcoded: false };
+function isHardcodedFill(node: SceneNode): {
+  hardcoded: boolean;
+  hex?: string;
+} {
+  if (!("fills" in node)) return { hardcoded: false };
   const fills = (node as GeometryMixin).fills;
   if (!Array.isArray(fills) || fills.length === 0) return { hardcoded: false };
 
   const first = fills[0];
-  if (first.type !== 'SOLID' || !first.visible) return { hardcoded: false };
+  if (first.type !== "SOLID" || !first.visible) return { hardcoded: false };
 
   // Check if bound to a variable
   const bound = (node as any).boundVariables;
   if (bound && bound.fills) return { hardcoded: false };
 
   const { r, g, b } = first.color;
-  const hex = '#' + [r, g, b].map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('');
+  const hex =
+    "#" +
+    [r, g, b]
+      .map((c) =>
+        Math.round(c * 255)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("");
 
   // Skip white and black — commonly used without tokens
-  if (hex === '#ffffff' || hex === '#000000') return { hardcoded: false };
+  if (hex === "#ffffff" || hex === "#000000") return { hardcoded: false };
 
   return { hardcoded: true, hex };
 }
@@ -71,9 +88,9 @@ function extractVariants(inst: InstanceNode): Record<string, string> {
   try {
     const props = inst.componentProperties;
     for (const [key, prop] of Object.entries(props)) {
-      if (prop.type === 'VARIANT') {
+      if (prop.type === "VARIANT") {
         // Strip the trailing hash ID from property names (e.g. "Size#1234" -> "Size")
-        const cleanKey = key.split('#')[0];
+        const cleanKey = key.split("#")[0];
         variants[cleanKey] = String(prop.value);
       }
     }
@@ -89,8 +106,8 @@ function extractTextOverrides(inst: InstanceNode): Record<string, string> {
   try {
     const props = inst.componentProperties;
     for (const [key, prop] of Object.entries(props)) {
-      if (prop.type === 'TEXT') {
-        const cleanKey = key.split('#')[0];
+      if (prop.type === "TEXT") {
+        const cleanKey = key.split("#")[0];
         overrides[cleanKey] = String(prop.value);
       }
     }
@@ -102,7 +119,9 @@ function extractTextOverrides(inst: InstanceNode): Record<string, string> {
 
 // ── Main analysis function ───────────────────────────────────
 
-export async function analyzeScope(scope: 'page' | 'file'): Promise<AnalysisResult> {
+export async function analyzeScope(
+  scope: "selection" | "page" | "file",
+): Promise<AnalysisResult> {
   abortAnalysis = false;
 
   const keyToName = buildKeyToName();
@@ -114,15 +133,26 @@ export async function analyzeScope(scope: 'page' | 'file'): Promise<AnalysisResu
   let hardcodedColors = 0;
   let missingAutoLayout = 0;
 
-  // Determine pages to scan
-  const pages: PageNode[] = scope === 'page'
-    ? [figma.currentPage]
-    : figma.root.children.slice(); // all pages
+  // Determine roots to scan
+  let roots: readonly SceneNode[] | PageNode[];
+  if (scope === "selection") {
+    const sel = figma.currentPage.selection;
+    if (sel.length === 0) {
+      throw new Error(
+        "Nothing selected. Please select one or more layers and try again.",
+      );
+    }
+    roots = sel;
+  } else if (scope === "page") {
+    roots = [figma.currentPage];
+  } else {
+    roots = figma.root.children.slice(); // all pages
+  }
 
   // Count total traversable nodes for progress
   let totalTraversable = 0;
-  for (const page of pages) {
-    totalTraversable += countTraversable(page);
+  for (const root of roots) {
+    totalTraversable += countTraversable(root);
   }
 
   let visited = 0;
@@ -135,19 +165,23 @@ export async function analyzeScope(scope: 'page' | 'file'): Promise<AnalysisResu
     totalNodes++;
 
     if (visited % 50 === 0) {
-      figma.ui.postMessage({ type: 'analysis-progress', current: visited, total: totalTraversable });
+      figma.ui.postMessage({
+        type: "analysis-progress",
+        current: visited,
+        total: totalTraversable,
+      });
       await yieldToMain();
     }
 
     const scene = node as SceneNode;
 
     // ── Instance detection ──
-    if (node.type === 'INSTANCE') {
+    if (node.type === "INSTANCE") {
       const inst = node as InstanceNode;
       const mainComp = inst.mainComponent;
-      const compKey = mainComp?.key || '';
-      const compName = keyToName.get(compKey) || mainComp?.name || 'Unknown';
-      const library = mainComp?.remote ? 'external' : 'local';
+      const compKey = mainComp?.key || "";
+      const compName = keyToName.get(compKey) || mainComp?.name || "Unknown";
+      const library = mainComp?.remote ? "external" : "local";
 
       if (compKey) uniqueComponents.add(compKey);
 
@@ -170,35 +204,43 @@ export async function analyzeScope(scope: 'page' | 'file'): Promise<AnalysisResu
     }
 
     // ── Hardcoded color detection ──
-    if ('fills' in scene) {
+    if ("fills" in scene) {
       const result = isHardcodedFill(scene);
       if (result.hardcoded) {
         hardcodedColors++;
         issues.push({
           nodeId: scene.id,
-          type: 'hardcoded-color',
+          type: "hardcoded-color",
           description: `Hardcoded fill ${result.hex} on "${scene.name}"`,
-          severity: 'warning',
+          severity: "warning",
         });
       }
     }
 
     // ── Missing auto-layout detection ──
-    if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+    if (
+      node.type === "FRAME" ||
+      node.type === "COMPONENT" ||
+      node.type === "COMPONENT_SET"
+    ) {
       const frame = node as FrameNode;
-      if (frame.layoutMode === 'NONE' && 'children' in frame && frame.children.length >= 3) {
+      if (
+        frame.layoutMode === "NONE" &&
+        "children" in frame &&
+        frame.children.length >= 3
+      ) {
         missingAutoLayout++;
         issues.push({
           nodeId: frame.id,
-          type: 'missing-auto-layout',
+          type: "missing-auto-layout",
           description: `Frame "${frame.name}" has ${frame.children.length} children but no auto-layout`,
-          severity: 'info',
+          severity: "info",
         });
       }
     }
 
     // ── Recurse into children ──
-    if ('children' in node) {
+    if ("children" in node) {
       for (const child of (node as ChildrenMixin).children) {
         if (abortAnalysis) return;
         await walk(child);
@@ -207,20 +249,25 @@ export async function analyzeScope(scope: 'page' | 'file'): Promise<AnalysisResu
   }
 
   // Run the walk
-  for (const page of pages) {
+  for (const root of roots) {
     if (abortAnalysis) break;
     // For file scope, need to load each page
-    if (scope === 'file' && page !== figma.currentPage) {
+    if (scope === "file" && root !== figma.currentPage) {
       try {
-        await page.loadAsync();
+        await (root as PageNode).loadAsync();
       } catch (_) {
         // page may fail to load — skip it
         continue;
       }
     }
-    for (const child of page.children) {
-      if (abortAnalysis) break;
-      await walk(child);
+    // For selection scope, walk each selected node directly
+    if (scope === "selection") {
+      await walk(root);
+    } else {
+      for (const child of (root as PageNode).children) {
+        if (abortAnalysis) break;
+        await walk(child);
+      }
     }
   }
 
@@ -235,7 +282,7 @@ export async function analyzeScope(scope: 'page' | 'file'): Promise<AnalysisResu
   const currentPage = figma.currentPage;
 
   return {
-    file: { name: figma.root.name, key: '' }, // file key not available in plugin API
+    file: { name: figma.root.name, key: "" }, // file key not available in plugin API
     scope,
     page: { name: currentPage.name, id: currentPage.id },
     instances,

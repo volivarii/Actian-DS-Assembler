@@ -1,10 +1,18 @@
 // DS Assembler — Generic Figma plugin for assembling component instances from JSON specs
 // Registry and token map are loaded at runtime from URLs, not bundled.
 
-import { ComponentEntry, Registry, SpecFrame, SpecInstance, SpecNode, UpdateInstruction, ComponentSpec } from './types';
-import { setAnalyzerRegistry, cancelAnalysis, analyzeScope } from './analyzer';
-import { setUpdaterRegistry, cancelUpdate, applyUpdates } from './updater';
-import { createComponentFromSpec, setCreatorRegistry } from './creator';
+import {
+  ComponentEntry,
+  Registry,
+  SpecFrame,
+  SpecInstance,
+  SpecNode,
+  UpdateInstruction,
+  ComponentSpec,
+} from "./types";
+import { setAnalyzerRegistry, cancelAnalysis, analyzeScope } from "./analyzer";
+import { setUpdaterRegistry, cancelUpdate, applyUpdates } from "./updater";
+import { createComponentFromSpec, setCreatorRegistry } from "./creator";
 
 // ── State ────────────────────────────────────────────────────
 let registry: Registry | null = null;
@@ -26,7 +34,9 @@ async function cachedImportComponent(key: string): Promise<ComponentNode> {
   return c;
 }
 
-async function cachedImportComponentSet(key: string): Promise<ComponentSetNode> {
+async function cachedImportComponentSet(
+  key: string,
+): Promise<ComponentSetNode> {
   let cs = componentSetCache.get(key);
   if (!cs) {
     cs = await figma.importComponentSetByKeyAsync(key);
@@ -37,19 +47,19 @@ async function cachedImportComponentSet(key: string): Promise<ComponentSetNode> 
 
 // ── Helpers ──────────────────────────────────────────────────
 function isInstance(node: SpecNode): node is SpecInstance {
-  return 'component' in node;
+  return "component" in node;
 }
 
 function yieldToMain(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0));
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 function sendLog(text: string, level?: string) {
-  figma.ui.postMessage({ type: 'log', text, level });
+  figma.ui.postMessage({ type: "log", text, level });
 }
 
 function sendProgress(current: number, total: number) {
-  figma.ui.postMessage({ type: 'progress', current, total });
+  figma.ui.postMessage({ type: "progress", current, total });
 }
 
 function countNodes(spec: SpecNode): number {
@@ -57,12 +67,17 @@ function countNodes(spec: SpecNode): number {
   return 1 + spec.children.reduce((sum, c) => sum + countNodes(c), 0);
 }
 
-function collectUniqueKeys(spec: SpecNode): Map<string, { key: string; hasVariants: boolean }> {
+function collectUniqueKeys(
+  spec: SpecNode,
+): Map<string, { key: string; hasVariants: boolean }> {
   const keys = new Map<string, { key: string; hasVariants: boolean }>();
   if (isInstance(spec)) {
     const entry = lookupComponent(spec.component);
     if (entry && !keys.has(entry.key)) {
-      keys.set(entry.key, { key: entry.key, hasVariants: Object.keys(entry.variants).length > 0 });
+      keys.set(entry.key, {
+        key: entry.key,
+        hasVariants: Object.keys(entry.variants).length > 0,
+      });
     }
   } else {
     for (const child of spec.children) {
@@ -78,7 +93,10 @@ function lookupComponent(name: string): ComponentEntry | null {
   return registry.components[name] || null;
 }
 
-function resolveVariantProps(entry: ComponentEntry, shortProps: Record<string, string>): Record<string, string> {
+function resolveVariantProps(
+  entry: ComponentEntry,
+  shortProps: Record<string, string>,
+): Record<string, string> {
   const resolved: Record<string, string> = {};
   for (const [shortName, value] of Object.entries(shortProps)) {
     const fullName = entry.variantShortNames[shortName];
@@ -87,26 +105,31 @@ function resolveVariantProps(entry: ComponentEntry, shortProps: Record<string, s
   return resolved;
 }
 
-function resolveTextProps(entry: ComponentEntry, shortText: Record<string, string>): Record<string, string> {
+function resolveTextProps(
+  entry: ComponentEntry,
+  shortText: Record<string, string>,
+): Record<string, string> {
   const resolved: Record<string, string> = {};
   for (const [shortName, value] of Object.entries(shortText)) {
-    const fullName = entry.textProperties.find(tp => tp.split('#')[0] === shortName);
+    const fullName = entry.textProperties.find(
+      (tp) => tp.split("#")[0] === shortName,
+    );
     if (fullName) resolved[fullName] = value;
   }
   return resolved;
 }
 
 function resolveColor(value: string): RGB | null {
-  if (value.startsWith('#')) return hexToRgb(value);
+  if (value.startsWith("#")) return hexToRgb(value);
   const hex = tokenMap[value];
   if (hex) return hexToRgb(hex);
   return null;
 }
 
 function hexToRgb(hex: string): RGB {
-  const h = hex.replace('#', '');
+  const h = hex.replace("#", "");
   // Handle rgba() values from token map
-  if (hex.startsWith('rgba')) return { r: 0.5, g: 0.5, b: 0.5 };
+  if (hex.startsWith("rgba")) return { r: 0.5, g: 0.5, b: 0.5 };
   return {
     r: parseInt(h.substring(0, 2), 16) / 255,
     g: parseInt(h.substring(2, 4), 16) / 255,
@@ -115,37 +138,65 @@ function hexToRgb(hex: string): RGB {
 }
 
 // ── Sizing ───────────────────────────────────────────────────
-const ALIGN_MAP = { 'min': 'MIN', 'center': 'CENTER', 'max': 'MAX', 'space-between': 'SPACE_BETWEEN' } as const;
-const COUNTER_ALIGN_MAP = { 'min': 'MIN', 'center': 'CENTER', 'max': 'MAX' } as const;
+const ALIGN_MAP = {
+  min: "MIN",
+  center: "CENTER",
+  max: "MAX",
+  "space-between": "SPACE_BETWEEN",
+} as const;
+const COUNTER_ALIGN_MAP = { min: "MIN", center: "CENTER", max: "MAX" } as const;
 
-function applyWidth(node: SceneNode, width: number | 'hug' | 'fill' | undefined) {
+function applyWidth(
+  node: SceneNode,
+  width: number | "hug" | "fill" | undefined,
+) {
   if (width === undefined) return;
   const n = node as any;
-  if (typeof width === 'number') { n.resize(width, n.height); n.layoutSizingHorizontal = 'FIXED'; }
-  else if (width === 'fill') { n.layoutSizingHorizontal = 'FILL'; }
-  else if (width === 'hug') { try { n.layoutSizingHorizontal = 'HUG'; } catch (_) {} }
+  if (typeof width === "number") {
+    n.resize(width, n.height);
+    n.layoutSizingHorizontal = "FIXED";
+  } else if (width === "fill") {
+    n.layoutSizingHorizontal = "FILL";
+  } else if (width === "hug") {
+    try {
+      n.layoutSizingHorizontal = "HUG";
+    } catch (_) {}
+  }
 }
 
-function applyHeight(node: SceneNode, height: number | 'hug' | 'fill' | undefined) {
+function applyHeight(
+  node: SceneNode,
+  height: number | "hug" | "fill" | undefined,
+) {
   if (height === undefined) return;
   const n = node as any;
-  if (typeof height === 'number') { n.resize(n.width, height); n.layoutSizingVertical = 'FIXED'; }
-  else if (height === 'fill') { n.layoutSizingVertical = 'FILL'; }
-  else if (height === 'hug') { try { n.layoutSizingVertical = 'HUG'; } catch (_) {} }
+  if (typeof height === "number") {
+    n.resize(n.width, height);
+    n.layoutSizingVertical = "FIXED";
+  } else if (height === "fill") {
+    n.layoutSizingVertical = "FILL";
+  } else if (height === "hug") {
+    try {
+      n.layoutSizingVertical = "HUG";
+    } catch (_) {}
+  }
 }
 
-const deferredFills = new Map<SceneNode, { fillWidth: boolean; fillHeight: boolean }>();
+const deferredFills = new Map<
+  SceneNode,
+  { fillWidth: boolean; fillHeight: boolean }
+>();
 
 // ── Assembly ─────────────────────────────────────────────────
 async function assembleFrame(spec: SpecFrame): Promise<SceneNode | null> {
   if (abortRequested) return null;
 
   const frame = figma.createFrame();
-  frame.name = spec.name || 'Frame';
-  frame.layoutMode = spec.layout === 'horizontal' ? 'HORIZONTAL' : 'VERTICAL';
+  frame.name = spec.name || "Frame";
+  frame.layoutMode = spec.layout === "horizontal" ? "HORIZONTAL" : "VERTICAL";
   frame.itemSpacing = spec.spacing || 0;
-  frame.layoutSizingHorizontal = 'HUG';
-  frame.layoutSizingVertical = 'HUG';
+  frame.layoutSizingHorizontal = "HUG";
+  frame.layoutSizingVertical = "HUG";
 
   if (spec.padding) {
     frame.paddingTop = spec.padding.top || 0;
@@ -156,13 +207,14 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode | null> {
 
   if (spec.fill) {
     const color = resolveColor(spec.fill);
-    if (color) frame.fills = [{ type: 'SOLID', color }];
+    if (color) frame.fills = [{ type: "SOLID", color }];
   } else {
     frame.fills = [];
   }
 
-  if (spec.align) frame.primaryAxisAlignItems = ALIGN_MAP[spec.align] || 'MIN';
-  if (spec.counterAlign) frame.counterAxisAlignItems = COUNTER_ALIGN_MAP[spec.counterAlign] || 'MIN';
+  if (spec.align) frame.primaryAxisAlignItems = ALIGN_MAP[spec.align] || "MIN";
+  if (spec.counterAlign)
+    frame.counterAxisAlignItems = COUNTER_ALIGN_MAP[spec.counterAlign] || "MIN";
   if (spec.cornerRadius) frame.cornerRadius = spec.cornerRadius;
 
   const childNodes: SceneNode[] = [];
@@ -179,19 +231,24 @@ async function assembleFrame(spec: SpecFrame): Promise<SceneNode | null> {
   for (const child of childNodes) {
     const deferred = deferredFills.get(child);
     if (deferred) {
-      if (deferred.fillWidth) applyWidth(child, 'fill');
-      if (deferred.fillHeight) applyHeight(child, 'fill');
+      if (deferred.fillWidth) applyWidth(child, "fill");
+      if (deferred.fillHeight) applyHeight(child, "fill");
       deferredFills.delete(child);
     }
   }
 
   // Apply own sizing
-  const needsDeferWidth = spec.width === 'fill';
-  const needsDeferHeight = spec.height === 'fill';
-  if (!needsDeferWidth && spec.width !== undefined) applyWidth(frame, spec.width);
-  if (!needsDeferHeight && spec.height !== undefined) applyHeight(frame, spec.height);
+  const needsDeferWidth = spec.width === "fill";
+  const needsDeferHeight = spec.height === "fill";
+  if (!needsDeferWidth && spec.width !== undefined)
+    applyWidth(frame, spec.width);
+  if (!needsDeferHeight && spec.height !== undefined)
+    applyHeight(frame, spec.height);
   if (needsDeferWidth || needsDeferHeight) {
-    deferredFills.set(frame, { fillWidth: needsDeferWidth, fillHeight: needsDeferHeight });
+    deferredFills.set(frame, {
+      fillWidth: needsDeferWidth,
+      fillHeight: needsDeferHeight,
+    });
   }
 
   nodeCount++;
@@ -206,7 +263,7 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
 
   const entry = lookupComponent(spec.component);
   if (!entry) {
-    sendLog(`Warning: "${spec.component}" not in registry — skipped`, 'error');
+    sendLog(`Warning: "${spec.component}" not in registry — skipped`, "error");
     nodeCount++;
     sendProgress(nodeCount, totalNodes);
     return null;
@@ -228,25 +285,36 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
     if (spec.props) {
       const resolved = resolveVariantProps(entry, spec.props);
       if (Object.keys(resolved).length > 0) {
-        try { instance.setProperties(resolved); }
-        catch (err) { sendLog(`  variant failed: ${(err as Error).message}`, 'error'); }
+        try {
+          instance.setProperties(resolved);
+        } catch (err) {
+          sendLog(`  variant failed: ${(err as Error).message}`, "error");
+        }
       }
     }
 
     if (spec.text) {
       const resolved = resolveTextProps(entry, spec.text);
       for (const [propName, value] of Object.entries(resolved)) {
-        try { instance.setProperties({ [propName]: value }); }
-        catch (err) { sendLog(`  text failed: ${(err as Error).message}`, 'error'); }
+        try {
+          instance.setProperties({ [propName]: value });
+        } catch (err) {
+          sendLog(`  text failed: ${(err as Error).message}`, "error");
+        }
       }
     }
 
-    const needsDeferWidth = spec.width === 'fill';
-    const needsDeferHeight = spec.height === 'fill';
-    if (!needsDeferWidth && spec.width !== undefined) applyWidth(instance, spec.width);
-    if (!needsDeferHeight && spec.height !== undefined) applyHeight(instance, spec.height);
+    const needsDeferWidth = spec.width === "fill";
+    const needsDeferHeight = spec.height === "fill";
+    if (!needsDeferWidth && spec.width !== undefined)
+      applyWidth(instance, spec.width);
+    if (!needsDeferHeight && spec.height !== undefined)
+      applyHeight(instance, spec.height);
     if (needsDeferWidth || needsDeferHeight) {
-      deferredFills.set(instance, { fillWidth: needsDeferWidth, fillHeight: needsDeferHeight });
+      deferredFills.set(instance, {
+        fillWidth: needsDeferWidth,
+        fillHeight: needsDeferHeight,
+      });
     }
 
     nodeCount++;
@@ -255,7 +323,7 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
 
     return instance;
   } catch (err) {
-    sendLog(`Failed: "${spec.component}": ${(err as Error).message}`, 'error');
+    sendLog(`Failed: "${spec.component}": ${(err as Error).message}`, "error");
     nodeCount++;
     sendProgress(nodeCount, totalNodes);
     return null;
@@ -272,14 +340,14 @@ figma.skipInvisibleInstanceChildren = true;
 figma.showUI(__html__, { width: 380, height: 520 });
 
 figma.ui.onmessage = async (msg: any) => {
-  if (msg.type === 'cancel') {
+  if (msg.type === "cancel") {
     abortRequested = true;
     cancelAnalysis();
     cancelUpdate();
     return;
   }
 
-  if (msg.type === 'load-registry') {
+  if (msg.type === "load-registry") {
     registry = msg.registry as Registry;
     tokenMap = msg.tokenMap || {};
     setAnalyzerRegistry(registry);
@@ -288,60 +356,87 @@ figma.ui.onmessage = async (msg: any) => {
     const compCount = Object.keys(registry.components).length;
     const tokenCount = Object.keys(tokenMap).length;
     sendLog(`Registry: ${compCount} components, ${tokenCount} tokens`);
-    figma.ui.postMessage({ type: 'registry-loaded', components: compCount, tokens: tokenCount });
+    figma.ui.postMessage({
+      type: "registry-loaded",
+      components: compCount,
+      tokens: tokenCount,
+    });
     return;
   }
 
-  if (msg.type === 'analyze') {
-    const scope: 'page' | 'file' = msg.scope || 'page';
+  if (msg.type === "analyze") {
+    const scope: "selection" | "page" | "file" = msg.scope || "page";
     sendLog(`Starting analysis (scope: ${scope})...`);
-    figma.ui.postMessage({ type: 'phase', phase: 'analyzing' });
+    figma.ui.postMessage({ type: "phase", phase: "analyzing" });
 
     try {
       const result = await analyzeScope(scope);
-      sendLog(`Analysis complete: ${result.stats.instances} instances, ${result.issues.length} issues`);
-      figma.ui.postMessage({ type: 'analysis-done', result });
+      sendLog(
+        `Analysis complete: ${result.stats.instances} instances, ${result.issues.length} issues`,
+      );
+      figma.ui.postMessage({ type: "analysis-done", result });
     } catch (err) {
-      figma.ui.postMessage({ type: 'error', text: `Analysis failed: ${(err as Error).message}` });
+      figma.ui.postMessage({
+        type: "error",
+        text: `Analysis failed: ${(err as Error).message}`,
+      });
     }
     return;
   }
 
-  if (msg.type === 'apply-updates') {
+  if (msg.type === "apply-updates") {
     const instructions = msg.instructions as UpdateInstruction[];
     if (!instructions || instructions.length === 0) {
-      figma.ui.postMessage({ type: 'error', text: 'No update instructions provided.' });
+      figma.ui.postMessage({
+        type: "error",
+        text: "No update instructions provided.",
+      });
       return;
     }
 
     sendLog(`Applying ${instructions.length} updates...`);
-    figma.ui.postMessage({ type: 'phase', phase: 'updating', total: instructions.length });
+    figma.ui.postMessage({
+      type: "phase",
+      phase: "updating",
+      total: instructions.length,
+    });
 
     try {
       const result = await applyUpdates(instructions);
-      sendLog(`Updates complete: ${result.applied} applied, ${result.failed} failed, ${result.skipped} skipped (${result.durationMs}ms)`);
-      figma.ui.postMessage({ type: 'update-done', result });
+      sendLog(
+        `Updates complete: ${result.applied} applied, ${result.failed} failed, ${result.skipped} skipped (${result.durationMs}ms)`,
+      );
+      figma.ui.postMessage({ type: "update-done", result });
     } catch (err) {
-      figma.ui.postMessage({ type: 'error', text: `Updates failed: ${(err as Error).message}` });
+      figma.ui.postMessage({
+        type: "error",
+        text: `Updates failed: ${(err as Error).message}`,
+      });
     }
     return;
   }
 
-  if (msg.type === 'create-component') {
+  if (msg.type === "create-component") {
     var spec = msg.spec as ComponentSpec;
-    sendLog('Creating component from spec...');
+    sendLog("Creating component from spec...");
     try {
       var result = await createComponentFromSpec(spec);
       figma.currentPage.appendChild(result);
       figma.viewport.scrollAndZoomIntoView([result]);
-      figma.ui.postMessage({ type: 'create-done', text: 'Component created: ' + spec.name });
+      figma.ui.postMessage({
+        type: "create-done",
+        text: "Component created: " + spec.name,
+      });
     } catch (err) {
-      figma.ui.postMessage({ type: 'error', text: 'Create failed: ' + (err as Error).message });
+      figma.ui.postMessage({
+        type: "error",
+        text: "Create failed: " + (err as Error).message,
+      });
     }
     return;
   }
 
-  if (msg.type === 'assemble') {
+  if (msg.type === "assemble") {
     const spec = msg.spec as SpecNode;
 
     // Reset state
@@ -353,8 +448,12 @@ figma.ui.onmessage = async (msg: any) => {
     // Pre-scan unique components
     const uniqueKeys = collectUniqueKeys(spec);
     sendLog(`Spec: ${totalNodes} nodes, ${uniqueKeys.size} unique components`);
-    sendLog('Pre-importing components...');
-    figma.ui.postMessage({ type: 'phase', phase: 'importing', total: uniqueKeys.size });
+    sendLog("Pre-importing components...");
+    figma.ui.postMessage({
+      type: "phase",
+      phase: "importing",
+      total: uniqueKeys.size,
+    });
 
     // Pre-warm cache
     let importCount = 0;
@@ -367,20 +466,30 @@ figma.ui.onmessage = async (msg: any) => {
           await cachedImportComponent(info.key);
         }
         importCount++;
-        figma.ui.postMessage({ type: 'import-progress', current: importCount, total: uniqueKeys.size });
+        figma.ui.postMessage({
+          type: "import-progress",
+          current: importCount,
+          total: uniqueKeys.size,
+        });
       } catch (err) {
-        sendLog(`Failed to pre-import: ${(err as Error).message}`, 'error');
+        sendLog(`Failed to pre-import: ${(err as Error).message}`, "error");
       }
       await yieldToMain();
     }
 
     if (abortRequested) {
-      figma.ui.postMessage({ type: 'error', text: 'Cancelled.' });
+      figma.ui.postMessage({ type: "error", text: "Cancelled." });
       return;
     }
 
-    sendLog(`Imported ${importCount}/${uniqueKeys.size} components. Assembling...`);
-    figma.ui.postMessage({ type: 'phase', phase: 'assembling', total: totalNodes });
+    sendLog(
+      `Imported ${importCount}/${uniqueKeys.size} components. Assembling...`,
+    );
+    figma.ui.postMessage({
+      type: "phase",
+      phase: "assembling",
+      total: totalNodes,
+    });
 
     try {
       const root = await assembleNode(spec);
@@ -388,19 +497,28 @@ figma.ui.onmessage = async (msg: any) => {
         figma.currentPage.appendChild(root);
         const deferred = deferredFills.get(root);
         if (deferred) {
-          if (deferred.fillWidth) applyWidth(root, 'fill');
-          if (deferred.fillHeight) applyHeight(root, 'fill');
+          if (deferred.fillWidth) applyWidth(root, "fill");
+          if (deferred.fillHeight) applyHeight(root, "fill");
           deferredFills.delete(root);
         }
         figma.viewport.scrollAndZoomIntoView([root]);
-        figma.ui.postMessage({ type: 'done', text: `Done! ${nodeCount} nodes assembled.` });
+        figma.ui.postMessage({
+          type: "done",
+          text: `Done! ${nodeCount} nodes assembled.`,
+        });
       } else if (abortRequested) {
-        figma.ui.postMessage({ type: 'error', text: 'Cancelled.' });
+        figma.ui.postMessage({ type: "error", text: "Cancelled." });
       } else {
-        figma.ui.postMessage({ type: 'error', text: 'Assembly produced no output.' });
+        figma.ui.postMessage({
+          type: "error",
+          text: "Assembly produced no output.",
+        });
       }
     } catch (err) {
-      figma.ui.postMessage({ type: 'error', text: `Assembly failed: ${(err as Error).message}` });
+      figma.ui.postMessage({
+        type: "error",
+        text: `Assembly failed: ${(err as Error).message}`,
+      });
     }
   }
 };

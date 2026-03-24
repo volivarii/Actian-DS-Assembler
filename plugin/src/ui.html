@@ -315,12 +315,35 @@
 
     <!-- Registry connection (always visible) -->
     <div class="section">
-      <label>Base URL</label>
+      <label>Registry URL</label>
       <input
         id="baseUrl"
         type="text"
-        value="https://raw.githubusercontent.com/volivarii/Actian-DS-Assembler/main"
+        value=""
+        placeholder="https://raw.githubusercontent.com/your-org/your-repo/main"
       />
+      <div style="font-size: 11px; color: #717d96; margin: 4px 0 8px">
+        URL to a directory containing
+        <code
+          style="
+            font-size: 10px;
+            background: #f5f5fa;
+            padding: 1px 4px;
+            border-radius: 3px;
+          "
+          >registry/component-registry.json</code
+        >. Use a GitHub raw URL or
+        <code
+          style="
+            font-size: 10px;
+            background: #f5f5fa;
+            padding: 1px 4px;
+            border-radius: 3px;
+          "
+          >http://localhost:8765</code
+        >
+        for local dev.
+      </div>
       <button
         class="btn btn-primary"
         id="loadBtn"
@@ -1010,14 +1033,16 @@
           );
           resetScan();
 
-          // POST to server
-          fetch(getBaseUrl() + "/analysis", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(r),
-          })
-            .then(() => log("Analysis saved to server", "success"))
-            .catch((err) => log("Failed to save: " + err.message, "error"));
+          // POST to server (only when using localhost)
+          if (getBaseUrl().indexOf("localhost") !== -1) {
+            fetch(getBaseUrl() + "/analysis", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(r),
+            })
+              .then(() => log("Analysis saved to server", "success"))
+              .catch((err) => log("Failed to save: " + err.message, "error"));
+          }
 
           // Show issues
           renderIssues(r);
@@ -1052,12 +1077,14 @@
           log(summary, "success");
           resetFixes();
 
-          // POST result to server
-          fetch(getBaseUrl() + "/update-result", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(r),
-          }).catch(() => {});
+          // POST result to server (only when using localhost)
+          if (getBaseUrl().indexOf("localhost") !== -1) {
+            fetch(getBaseUrl() + "/update-result", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(r),
+            }).catch(() => {});
+          }
         }
 
         // Create done
