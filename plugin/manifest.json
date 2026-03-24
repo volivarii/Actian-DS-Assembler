@@ -5,10 +5,9 @@
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "networkAccess": {
-    "allowedDomains": [
-      "https://raw.githubusercontent.com",
-      "http://localhost:8765"
-    ]
+    "allowedDomains": ["https://raw.githubusercontent.com"],
+    "devAllowedDomains": ["http://localhost:8765"],
+    "reasoning": "Fetches component registry and token map from GitHub. Localhost is used during development for local registry and analysis server."
   },
   "editorType": ["figma"]
 }
