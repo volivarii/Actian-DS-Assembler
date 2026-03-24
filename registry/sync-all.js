@@ -57,7 +57,7 @@ if (!TOKEN) {
 const REGISTRY_DIR = path.resolve(__dirname);
 const CLAUDE_PLUGIN_DIR = path.resolve(
   __dirname,
-  "../../actian-design-system-plugin",
+  "../../actian-design-system-plugin/plugins/actian-design-system",
 );
 const DOCS_DIR = path.join(CLAUDE_PLUGIN_DIR, "docs");
 
