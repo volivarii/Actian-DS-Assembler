@@ -316,7 +316,11 @@
     <!-- Registry connection (always visible) -->
     <div class="section">
       <label>Base URL</label>
-      <input id="baseUrl" type="text" value="http://localhost:8765" />
+      <input
+        id="baseUrl"
+        type="text"
+        value="https://raw.githubusercontent.com/volivarii/Actian-DS-Assembler/main"
+      />
       <button
         class="btn btn-primary"
         id="loadBtn"
@@ -567,10 +571,25 @@
             "*",
           );
         } catch (err) {
+          var isLocal = baseUrl.indexOf("localhost") !== -1;
           log("Failed: " + err.message, "error");
+          if (isLocal) {
+            log("Server not running. Start it with:", "error");
+            log(
+              "  cd ~/Developer/Actian/Actian-DS-Assembler && python3 -m http.server 8765",
+              "error",
+            );
+            log("Or use the GitHub URL instead:", "error");
+            log(
+              "  https://raw.githubusercontent.com/volivarii/Actian-DS-Assembler/main",
+              "error",
+            );
+          }
           showStatus(
             document.getElementById("registryStatus"),
-            "Failed: " + err.message,
+            isLocal
+              ? "Server not running \u2014 see log for help"
+              : "Failed: " + err.message,
             "error",
           );
           btn.disabled = false;

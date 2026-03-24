@@ -5,8 +5,10 @@
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "networkAccess": {
-    "allowedDomains": ["none"],
-    "devAllowedDomains": ["http://localhost:8765"]
+    "allowedDomains": [
+      "https://raw.githubusercontent.com",
+      "http://localhost:8765"
+    ]
   },
   "editorType": ["figma"]
 }
