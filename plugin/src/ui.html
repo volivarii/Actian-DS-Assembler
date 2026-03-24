@@ -313,7 +313,7 @@
     <h1>DS Assembler</h1>
     <div class="subtitle">Assemble, review, and create Figma designs</div>
 
-    <!-- Registry connection (always visible) -->
+    <!-- Connection (always visible) -->
     <div class="section">
       <label>Registry URL</label>
       <input
@@ -321,6 +321,19 @@
         type="text"
         value=""
         placeholder="Paste your registry base URL here"
+        style="margin-bottom: 6px"
+      />
+      <label style="margin-top: 8px"
+        >Local server
+        <span style="font-weight: 400; color: #888; font-size: 11px"
+          >(for Assemble, Review, Create)</span
+        ></label
+      >
+      <input
+        id="serverUrl"
+        type="text"
+        value="http://localhost:8765"
+        placeholder="http://localhost:8765"
         style="margin-bottom: 6px"
       />
       <div
@@ -599,6 +612,15 @@
           .replace(/\/$/, "");
       }
 
+      function getServerUrl() {
+        return (
+          document
+            .getElementById("serverUrl")
+            .value.trim()
+            .replace(/\/$/, "") || "http://localhost:8765"
+        );
+      }
+
       // ── Tabs ──────────────────────────────────────────────────
       function switchTab(tab) {
         document
@@ -664,7 +686,7 @@
       // ── Assemble ──────────────────────────────────────────────
       async function handleAssemble() {
         const specUrl =
-          getBaseUrl() + "/" + document.getElementById("specFile").value.trim();
+          getServerUrl() + "/" + document.getElementById("specFile").value.trim();
         const btn = document.getElementById("assembleBtn");
         btn.disabled = true;
         btn.textContent = "Assembling...";
@@ -814,7 +836,7 @@
 
         try {
           const res = await fetch(
-            getBaseUrl() + "/updates.json?t=" + Date.now(),
+            getServerUrl() + "/updates.json?t=" + Date.now(),
           );
           if (!res.ok) throw new Error("HTTP " + res.status);
           const data = await res.json();
@@ -947,7 +969,7 @@
       // ── Create ────────────────────────────────────────────────
       async function handleCreate() {
         var specUrl =
-          getBaseUrl() +
+          getServerUrl() +
           "/" +
           document.getElementById("createSpecFile").value.trim();
         var btn = document.getElementById("createBtn");
@@ -1075,8 +1097,8 @@
           resetScan();
 
           // POST to server (only when using localhost)
-          if (getBaseUrl().indexOf("localhost") !== -1) {
-            fetch(getBaseUrl() + "/analysis", {
+          if (getServerUrl().indexOf("localhost") !== -1) {
+            fetch(getServerUrl() + "/analysis", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(r),
@@ -1119,8 +1141,8 @@
           resetFixes();
 
           // POST result to server (only when using localhost)
-          if (getBaseUrl().indexOf("localhost") !== -1) {
-            fetch(getBaseUrl() + "/update-result", {
+          if (getServerUrl().indexOf("localhost") !== -1) {
+            fetch(getServerUrl() + "/update-result", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(r),
