@@ -698,21 +698,25 @@
 
         log("Fetching spec: " + specUrl);
         try {
-          var controller = new AbortController();
-          var timeoutId = setTimeout(function () {
-            controller.abort();
-          }, 10000);
-          const res = await fetch(specUrl, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          const spec = await res.json();
+          var fetchResult = await Promise.race([
+            fetch(specUrl).then(function (res) {
+              if (!res.ok) throw new Error("HTTP " + res.status);
+              return res.json();
+            }),
+            new Promise(function (_, reject) {
+              setTimeout(function () {
+                reject(new Error("TIMEOUT"));
+              }, 10000);
+            }),
+          ]);
+          log("Spec loaded, sending to plugin...");
           parent.postMessage(
-            { pluginMessage: { type: "assemble", spec } },
+            { pluginMessage: { type: "assemble", spec: fetchResult } },
             "*",
           );
         } catch (err) {
           var msg =
-            err.name === "AbortError"
+            err.message === "TIMEOUT"
               ? "Timeout — server at " +
                 getServerUrl() +
                 " not responding. Is it running?"

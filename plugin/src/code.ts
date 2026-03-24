@@ -78,13 +78,17 @@ function sendProgress(current: number, total: number) {
   figma.ui.postMessage({ type: "progress", current, total });
 }
 
-function countNodes(spec: SpecNode): number {
+function countNodes(spec: any): number {
+  if (!spec) return 0;
   if (isInstance(spec)) return 1;
-  return 1 + spec.children.reduce((sum, c) => sum + countNodes(c), 0);
+  if (!spec.children) return 1; // text nodes, shapes, etc.
+  return (
+    1 + spec.children.reduce((sum: number, c: any) => sum + countNodes(c), 0)
+  );
 }
 
 function collectUniqueKeys(
-  spec: SpecNode,
+  spec: any,
 ): Map<string, { key: string; hasVariants: boolean }> {
   const keys = new Map<string, { key: string; hasVariants: boolean }>();
   if (isInstance(spec)) {
@@ -95,7 +99,7 @@ function collectUniqueKeys(
         hasVariants: Object.keys(entry.variants).length > 0,
       });
     }
-  } else {
+  } else if (spec.children) {
     for (const child of spec.children) {
       for (const [k, v] of collectUniqueKeys(child)) keys.set(k, v);
     }
@@ -311,11 +315,44 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
 
     if (spec.text) {
       const resolved = resolveTextProps(entry, spec.text);
-      for (const [propName, value] of Object.entries(resolved)) {
-        try {
-          instance.setProperties({ [propName]: value });
-        } catch (err) {
-          sendLog(`  text failed: ${(err as Error).message}`, "error");
+      if (Object.keys(resolved).length > 0) {
+        // Use component properties (exposed text props)
+        for (const [propName, value] of Object.entries(resolved)) {
+          try {
+            instance.setProperties({ [propName]: value });
+          } catch (err) {
+            sendLog(`  text prop failed: ${(err as Error).message}`, "error");
+          }
+        }
+      } else {
+        // Fallback: find text nodes by name inside the instance
+        for (const [name, value] of Object.entries(spec.text)) {
+          try {
+            const textNode = instance.findOne(
+              (n: any) =>
+                n.type === "TEXT" && n.name.split("#")[0].trim() === name,
+            ) as TextNode | null;
+            if (textNode) {
+              await figma.loadFontAsync(textNode.fontName as FontName);
+              textNode.characters = value as string;
+            } else {
+              // Try partial match (name contains the key)
+              const partial = instance.findOne(
+                (n: any) =>
+                  n.type === "TEXT" &&
+                  n.name.toLowerCase().includes(name.toLowerCase()),
+              ) as TextNode | null;
+              if (partial) {
+                await figma.loadFontAsync(partial.fontName as FontName);
+                partial.characters = value as string;
+              }
+            }
+          } catch (err) {
+            sendLog(
+              `  text override failed for "${name}": ${(err as Error).message}`,
+              "error",
+            );
+          }
         }
       }
     }
@@ -346,9 +383,70 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
   }
 }
 
-async function assembleNode(spec: SpecNode): Promise<SceneNode | null> {
+async function assembleTextNode(spec: any): Promise<SceneNode | null> {
+  const TEXT_STYLES: Record<
+    string,
+    { size: number; lineHeight: number; weight: number }
+  > = {
+    "heading-display": { size: 24, lineHeight: 32, weight: 600 },
+    "heading-prominent": { size: 18, lineHeight: 24, weight: 600 },
+    "heading-standard": { size: 16, lineHeight: 22, weight: 600 },
+    "heading-subtle": { size: 14, lineHeight: 20, weight: 600 },
+    "body-standard": { size: 14, lineHeight: 20, weight: 400 },
+    "body-subtle": { size: 12, lineHeight: 16, weight: 400 },
+    "label-standard": { size: 14, lineHeight: 20, weight: 500 },
+    "label-subtle": { size: 12, lineHeight: 16, weight: 500 },
+    "label-micro": { size: 11, lineHeight: 14, weight: 500 },
+  };
+  function weightToStyle(w: number): string {
+    if (w >= 600) return "Semi Bold";
+    if (w >= 500) return "Medium";
+    return "Regular";
+  }
+
+  const node = figma.createText();
+  const styleDef =
+    TEXT_STYLES[spec.style || "body-standard"] || TEXT_STYLES["body-standard"];
+  const family = "Inter";
+  await figma.loadFontAsync({ family, style: weightToStyle(styleDef.weight) });
+  node.fontName = { family, style: weightToStyle(styleDef.weight) };
+  node.fontSize = styleDef.size;
+  node.lineHeight = { value: styleDef.lineHeight, unit: "PIXELS" };
+  node.characters = spec.content || "Text";
+  if (spec.name) node.name = spec.name;
+  if (spec.fill) {
+    const hex = spec.fill.replace("#", "");
+    node.fills = [
+      {
+        type: "SOLID",
+        color: {
+          r: parseInt(hex.substring(0, 2), 16) / 255,
+          g: parseInt(hex.substring(2, 4), 16) / 255,
+          b: parseInt(hex.substring(4, 6), 16) / 255,
+        },
+      },
+    ];
+  }
+  if (spec.width === "fill") {
+    deferredFills.set(node, { fillWidth: true, fillHeight: false });
+  } else if (typeof spec.width === "number") {
+    node.resize(spec.width, node.height);
+    (node as any).textAutoResize = "HEIGHT";
+  }
+  nodeCount++;
+  sendProgress(nodeCount, totalNodes);
+  return node;
+}
+
+async function assembleNode(spec: any): Promise<SceneNode | null> {
   if (isInstance(spec)) return assembleInstance(spec);
-  return assembleFrame(spec);
+  if (spec.type === "text") return assembleTextNode(spec);
+  if (spec.children) return assembleFrame(spec);
+  sendLog(
+    `Unknown node type: ${JSON.stringify(spec).substring(0, 100)}`,
+    "error",
+  );
+  return null;
 }
 
 // ── Plugin entry point ───────────────────────────────────────
@@ -453,87 +551,98 @@ figma.ui.onmessage = async (msg: any) => {
   }
 
   if (msg.type === "assemble") {
-    const spec = msg.spec as SpecNode;
-
-    // Reset state
-    abortRequested = false;
-    nodeCount = 0;
-    totalNodes = countNodes(spec);
-    deferredFills.clear();
-
-    // Pre-scan unique components
-    const uniqueKeys = collectUniqueKeys(spec);
-    sendLog(`Spec: ${totalNodes} nodes, ${uniqueKeys.size} unique components`);
-    sendLog("Pre-importing components...");
-    figma.ui.postMessage({
-      type: "phase",
-      phase: "importing",
-      total: uniqueKeys.size,
-    });
-
-    // Pre-warm cache
-    let importCount = 0;
-    for (const [, info] of uniqueKeys) {
-      if (abortRequested) break;
-      try {
-        if (info.hasVariants) {
-          await cachedImportComponentSet(info.key);
-        } else {
-          await cachedImportComponent(info.key);
-        }
-        importCount++;
-        figma.ui.postMessage({
-          type: "import-progress",
-          current: importCount,
-          total: uniqueKeys.size,
-        });
-      } catch (err) {
-        sendLog(`Failed to pre-import: ${(err as Error).message}`, "error");
-      }
-      await yieldToMain();
-    }
-
-    if (abortRequested) {
-      figma.ui.postMessage({ type: "error", text: "Cancelled." });
-      return;
-    }
-
-    sendLog(
-      `Imported ${importCount}/${uniqueKeys.size} components. Assembling...`,
-    );
-    figma.ui.postMessage({
-      type: "phase",
-      phase: "assembling",
-      total: totalNodes,
-    });
-
+    sendLog("Assemble message received");
     try {
-      const root = await assembleNode(spec);
-      if (root && !abortRequested) {
-        figma.currentPage.appendChild(root);
-        const deferred = deferredFills.get(root);
-        if (deferred) {
-          if (deferred.fillWidth) applyWidth(root, "fill");
-          if (deferred.fillHeight) applyHeight(root, "fill");
-          deferredFills.delete(root);
+      const spec = msg.spec as SpecNode;
+
+      // Reset state
+      abortRequested = false;
+      nodeCount = 0;
+      totalNodes = countNodes(spec);
+      deferredFills.clear();
+
+      // Pre-scan unique components
+      const uniqueKeys = collectUniqueKeys(spec);
+      sendLog(
+        `Spec: ${totalNodes} nodes, ${uniqueKeys.size} unique components`,
+      );
+      sendLog("Pre-importing components...");
+      figma.ui.postMessage({
+        type: "phase",
+        phase: "importing",
+        total: uniqueKeys.size,
+      });
+
+      // Pre-warm cache
+      let importCount = 0;
+      for (const [, info] of uniqueKeys) {
+        if (abortRequested) break;
+        try {
+          if (info.hasVariants) {
+            await cachedImportComponentSet(info.key);
+          } else {
+            await cachedImportComponent(info.key);
+          }
+          importCount++;
+          figma.ui.postMessage({
+            type: "import-progress",
+            current: importCount,
+            total: uniqueKeys.size,
+          });
+        } catch (err) {
+          sendLog(`Failed to pre-import: ${(err as Error).message}`, "error");
         }
-        figma.viewport.scrollAndZoomIntoView([root]);
-        figma.ui.postMessage({
-          type: "done",
-          text: `Done! ${nodeCount} nodes assembled.`,
-        });
-      } else if (abortRequested) {
+        await yieldToMain();
+      }
+
+      if (abortRequested) {
         figma.ui.postMessage({ type: "error", text: "Cancelled." });
-      } else {
+        return;
+      }
+
+      sendLog(
+        `Imported ${importCount}/${uniqueKeys.size} components. Assembling...`,
+      );
+      figma.ui.postMessage({
+        type: "phase",
+        phase: "assembling",
+        total: totalNodes,
+      });
+
+      try {
+        const root = await assembleNode(spec);
+        if (root && !abortRequested) {
+          figma.currentPage.appendChild(root);
+          const deferred = deferredFills.get(root);
+          if (deferred) {
+            if (deferred.fillWidth) applyWidth(root, "fill");
+            if (deferred.fillHeight) applyHeight(root, "fill");
+            deferredFills.delete(root);
+          }
+          figma.viewport.scrollAndZoomIntoView([root]);
+          figma.ui.postMessage({
+            type: "done",
+            text: `Done! ${nodeCount} nodes assembled.`,
+          });
+        } else if (abortRequested) {
+          figma.ui.postMessage({ type: "error", text: "Cancelled." });
+        } else {
+          figma.ui.postMessage({
+            type: "error",
+            text: "Assembly produced no output.",
+          });
+        }
+      } catch (err) {
         figma.ui.postMessage({
           type: "error",
-          text: "Assembly produced no output.",
+          text: `Assembly failed: ${(err as Error).message}`,
         });
       }
-    } catch (err) {
+    } catch (outerErr) {
+      sendLog(`FATAL: ${(outerErr as Error).message}`, "error");
       figma.ui.postMessage({
         type: "error",
-        text: `Assembly failed: ${(err as Error).message}`,
+        text: `Assemble crashed: ${(outerErr as Error).message}`,
       });
     }
   }
