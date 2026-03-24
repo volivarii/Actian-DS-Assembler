@@ -313,8 +313,37 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
       }
     }
 
-    if (spec.text) {
-      const resolved = resolveTextProps(entry, spec.text);
+    // Boolean overrides (e.g., hide leading/trailing icons)
+    const boolOverrides = spec.booleanOverrides || spec.boolean;
+    if (boolOverrides) {
+      for (const [shortName, value] of Object.entries(boolOverrides)) {
+        // Find the full property name from registry booleanProperties
+        const fullName = (entry.booleanProperties || []).find(
+          (bp: string) => bp.split("#")[0].trim() === shortName,
+        );
+        if (fullName) {
+          try {
+            instance.setProperties({ [fullName]: value as boolean });
+          } catch (err) {
+            sendLog(
+              `  boolean failed for "${shortName}": ${(err as Error).message}`,
+              "error",
+            );
+          }
+        } else {
+          // Try direct match (user provided full name)
+          try {
+            instance.setProperties({ [shortName]: value as boolean });
+          } catch (err) {
+            sendLog(`  boolean "${shortName}" not found in registry`, "error");
+          }
+        }
+      }
+    }
+
+    const textOverrides = spec.text || spec.textOverrides;
+    if (textOverrides) {
+      const resolved = resolveTextProps(entry, textOverrides);
       if (Object.keys(resolved).length > 0) {
         // Use component properties (exposed text props)
         for (const [propName, value] of Object.entries(resolved)) {
@@ -325,33 +354,102 @@ async function assembleInstance(spec: SpecInstance): Promise<SceneNode | null> {
           }
         }
       } else {
-        // Fallback: find text nodes by name inside the instance
-        for (const [name, value] of Object.entries(spec.text)) {
+        // Fallback: find text nodes by name inside the instance (including nested instances)
+        // Support two formats:
+        //   "Label": "text"          → find text node named "Label" anywhere in tree
+        //   "Tab 1": "General"       → find Nth nested instance and override its text
+        const allTextNodes = instance.findAll(
+          (n: any) => n.type === "TEXT",
+        ) as TextNode[];
+
+        // Build a map of numbered keys (e.g., "Tab 1", "Tab 2") for sequential override
+        const numberedEntries: Array<[string, string, number]> = [];
+        const directEntries: Array<[string, string]> = [];
+
+        for (const [name, value] of Object.entries(textOverrides)) {
+          const match = name.match(/^(.+?)\s*(\d+)$/);
+          if (match) {
+            numberedEntries.push([
+              match[1].trim(),
+              value as string,
+              parseInt(match[2]),
+            ]);
+          } else {
+            directEntries.push([name, value as string]);
+          }
+        }
+
+        // Handle direct text overrides (find by name)
+        // If only one override and only one text node, apply regardless of name
+        if (directEntries.length === 1 && allTextNodes.length === 1) {
           try {
-            const textNode = instance.findOne(
-              (n: any) =>
-                n.type === "TEXT" && n.name.split("#")[0].trim() === name,
-            ) as TextNode | null;
-            if (textNode) {
-              await figma.loadFontAsync(textNode.fontName as FontName);
-              textNode.characters = value as string;
-            } else {
-              // Try partial match (name contains the key)
-              const partial = instance.findOne(
-                (n: any) =>
-                  n.type === "TEXT" &&
-                  n.name.toLowerCase().includes(name.toLowerCase()),
-              ) as TextNode | null;
-              if (partial) {
-                await figma.loadFontAsync(partial.fontName as FontName);
-                partial.characters = value as string;
-              }
-            }
+            await figma.loadFontAsync(allTextNodes[0].fontName as FontName);
+            allTextNodes[0].characters = directEntries[0][1];
           } catch (err) {
             sendLog(
-              `  text override failed for "${name}": ${(err as Error).message}`,
+              `  text override failed: ${(err as Error).message}`,
               "error",
             );
+          }
+        } else {
+          for (const [name, value] of directEntries) {
+            try {
+              // Exact match first
+              let textNode =
+                allTextNodes.find(
+                  (n) => n.name.split("#")[0].trim() === name,
+                ) || null;
+              // Partial match
+              if (!textNode) {
+                textNode =
+                  allTextNodes.find((n) =>
+                    n.name.toLowerCase().includes(name.toLowerCase()),
+                  ) || null;
+              }
+              // Last resort: if this is the only unmatched override and there's a text node, use it
+              if (!textNode && allTextNodes.length > 0) {
+                textNode = allTextNodes[0];
+              }
+              if (textNode) {
+                await figma.loadFontAsync(textNode.fontName as FontName);
+                textNode.characters = value;
+              }
+            } catch (err) {
+              sendLog(
+                `  text override failed for "${name}": ${(err as Error).message}`,
+                "error",
+              );
+            }
+          }
+        }
+
+        // Handle numbered overrides (e.g., "Tab 1", "Tab 2", "Tab 3")
+        // Find nested instances and override their text sequentially
+        if (numberedEntries.length > 0) {
+          const nestedInstances = instance.findAll(
+            (n: any) => n.type === "INSTANCE",
+          ) as InstanceNode[];
+
+          for (const [baseName, value, index] of numberedEntries) {
+            try {
+              // index is 1-based
+              const targetInstance = nestedInstances[index - 1];
+              if (targetInstance) {
+                // Find the first text node in this nested instance
+                const nestedText = targetInstance.findOne(
+                  (n: any) => n.type === "TEXT",
+                ) as TextNode | null;
+                if (nestedText) {
+                  await figma.loadFontAsync(nestedText.fontName as FontName);
+                  nestedText.characters = value;
+                }
+              }
+            } catch (err) {
+              sendLog(
+                `  text override failed for "${baseName} ${index}": ${(err as Error).message}`,
+                "error",
+              );
+            }
           }
         }
       }
