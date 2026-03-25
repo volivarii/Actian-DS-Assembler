@@ -43,12 +43,15 @@ Figma libraries
 This repo:
     registry/component-registry.json    ← component names, variants, properties
     registry/token-map.json             ← --zen-* token → hex lookup
-    registry/ds2026-component-reference.md
-    registry/fm-component-catalog.md
+    registry/ds2026-components.md
+    registry/fm-components.md
     tokens/tokens.css                   ← CSS custom properties
     tokens/actian-ds.tokens.json        ← W3C DTCG format
-    docs/design-system.md              ← human-readable token reference
+    docs/token-reference.md              ← human-readable token reference
+    docs/content-guidelines.md          ← curated UI copy rules
+    docs/accessibility-guidelines.md    ← curated WCAG 2.1 AA standards
     docs/component-guidelines/*.json    ← per-component content/design guidelines
+    docs/foundations/*.json             ← foundation docs from Figma
     ↓
 Claude plugin: scripts/sync-from-upstream.sh (fetches via GitHub raw URLs)
 ```
@@ -59,12 +62,15 @@ Claude plugin: scripts/sync-from-upstream.sh (fetches via GitHub raw URLs)
 |------|-------------------|-------------|
 | Component registry (12K+ lines) | `registry/component-registry.json` | Assembler plugin (runtime) |
 | Token-to-hex map | `registry/token-map.json` | Assembler plugin (runtime) |
-| DS2026 component reference | `registry/ds2026-component-reference.md` | Claude plugin (synced) |
-| FM Kit component catalog | `registry/fm-component-catalog.md` | Claude plugin (synced) |
+| DS2026 component reference | `registry/ds2026-components.md` | Claude plugin (synced) |
+| FM Kit component catalog | `registry/fm-components.md` | Claude plugin (synced) |
 | CSS custom properties | `tokens/tokens.css` | Both (synced to Claude plugin) |
 | W3C DTCG tokens | `tokens/actian-ds.tokens.json` | Claude plugin (synced) |
-| Token reference (human-readable) | `docs/design-system.md` | Claude plugin (synced) |
+| Token reference (human-readable) | `docs/token-reference.md` | Claude plugin (synced) |
+| Content guidelines (curated) | `docs/content-guidelines.md` | Claude plugin (synced) |
+| Accessibility guidelines (curated) | `docs/accessibility-guidelines.md` | Claude plugin (synced) |
 | Per-component guidelines | `docs/component-guidelines/*.json` | Claude plugin (synced) |
+| Foundation docs | `docs/foundations/*.json` | Claude plugin (synced) |
 | FM descriptions (manual) | `registry/fm-descriptions.json` | Sync script (fallback for FM) |
 
 ## Setup
@@ -82,8 +88,8 @@ Requires `FIGMA_TOKEN` in `.env` (see `.env.example`).
 This generates:
 - `registry/component-registry.json` — all components, variants, properties
 - `registry/token-map.json` — token name → hex value
-- `registry/ds2026-component-reference.md` — human-readable DS2026 catalog
-- `registry/fm-component-catalog.md` — human-readable FM Kit catalog
+- `registry/ds2026-components.md` — human-readable DS2026 catalog
+- `registry/fm-components.md` — human-readable FM Kit catalog
 
 ### 2. Build the Figma plugin
 

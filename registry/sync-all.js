@@ -13,8 +13,8 @@
  *   registry/token-map.json            — token name → hex (used by assembler)
  *
  * Outputs (in actian-design-system-plugin/docs/):
- *   ds2026-component-reference.md      — DS2026 component catalog with descriptions
- *   fm-component-catalog.md            — Fat Marker component catalog (updated)
+ *   ds2026-components.md      — DS2026 component catalog with descriptions
+ *   fm-components.md            — Fat Marker component catalog (updated)
  */
 
 const fs = require("fs");
@@ -195,9 +195,7 @@ function generateComponentReference(
   const md = [];
   const isDS = libId === "ds2026";
   const title = isDS ? "Actian Design System 2026" : "Fat Marker Kit";
-  const filename = isDS
-    ? "ds2026-component-reference.md"
-    : "fm-component-catalog.md";
+  const filename = isDS ? "ds2026-components.md" : "fm-components.md";
   const fmDescs = isDS ? {} : loadFmDescriptions();
 
   md.push(`# ${title} — Component Reference`);
@@ -495,9 +493,7 @@ async function main() {
     console.log(`  registry/token-map.json           (${tokenCount} tokens)`);
   for (const libId of targets) {
     const filename =
-      libId === "ds2026"
-        ? "ds2026-component-reference.md"
-        : "fm-component-catalog.md";
+      libId === "ds2026" ? "ds2026-components.md" : "fm-components.md";
     console.log(`  docs/${filename}`);
   }
   console.log("");
