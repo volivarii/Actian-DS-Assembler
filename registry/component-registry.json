@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-03-24T18:39:36.911Z",
+    "generatedAt": "2026-03-25T15:08:11.682Z",
     "libraries": {
       "ds2026": {
         "fileKey": "l8biHxfarNi1I2RMvVxVOK",
@@ -1570,28 +1570,6 @@
       "textProperties": [],
       "booleanProperties": []
     },
-    "Alert-banner": {
-      "key": "9717f500f425975f63c0eb2f9c1e434ff010f24b",
-      "library": "ds2026",
-      "description": "Static, high-visibility message placed at the top of a page or section. Use for persistent system-level information (Success, Info, Warning, Error) that doesn't disappear automatically.",
-      "page": "        Alert (banner)",
-      "variants": {
-        "Type": [
-          "Primary",
-          "Success",
-          "Warning",
-          "Danger"
-        ]
-      },
-      "variantShortNames": {
-        "Type": "Type"
-      },
-      "textProperties": [],
-      "booleanProperties": [
-        "Show Icon#14881:0",
-        "Show close button#14881:5"
-      ]
-    },
     "Input, date": {
       "key": "9eafdb6242837b591ba5f39959150b53e40ef02d",
       "library": "ds2026",
@@ -1685,6 +1663,34 @@
       },
       "textProperties": [],
       "booleanProperties": []
+    },
+    "Alert-banner": {
+      "key": "9717f500f425975f63c0eb2f9c1e434ff010f24b",
+      "library": "ds2026",
+      "description": "Static, high-visibility message placed at the top of a page or section. Use for persistent system-level information (Success, Info, Warning, Error) that doesn't disappear automatically.",
+      "page": "        Alert (banner)",
+      "variants": {
+        "Type": [
+          "Primary",
+          "Success",
+          "Warning",
+          "Danger"
+        ],
+        "Orientation'": [
+          "Horizontal",
+          "Vertical"
+        ]
+      },
+      "variantShortNames": {
+        "Type": "Type",
+        "Orientation'": "Orientation'"
+      },
+      "textProperties": [],
+      "booleanProperties": [
+        "Show Icon#14881:0",
+        "Show close button#14881:5",
+        "Show action#14907:5"
+      ]
     },
     "openapi": {
       "key": "5ea85665e7f62e75c15adad3e5d664d1cf8cc059",
@@ -2386,7 +2392,7 @@
       "textProperties": [],
       "booleanProperties": []
     },
-    "Type=Primary": {
+    "Type=Primary, Orientation'=Horizontal": {
       "key": "5cbcbd676a3f4687691b2153885635c50fea230e",
       "library": "ds2026",
       "description": "",
@@ -5516,7 +5522,7 @@
       "textProperties": [],
       "booleanProperties": []
     },
-    "Type=Success": {
+    "Type=Success, Orientation'=Horizontal": {
       "key": "66aebc399ceebe68fb0ea657c49e21493be62ef7",
       "library": "ds2026",
       "description": "",
@@ -6956,16 +6962,6 @@
       "textProperties": [],
       "booleanProperties": []
     },
-    "Type=Warning": {
-      "key": "d811d12f1c014676252427380b491f84cb659707",
-      "library": "ds2026",
-      "description": "",
-      "page": "        Alert (banner)",
-      "variants": {},
-      "variantShortNames": {},
-      "textProperties": [],
-      "booleanProperties": []
-    },
     "Type=Primary, Size=Default, State=Focused": {
       "key": "d9c842f84049e904be4d20104daaa043a5d2ff34",
       "library": "ds2026",
@@ -7976,6 +7972,16 @@
       "textProperties": [],
       "booleanProperties": []
     },
+    "Type=Success": {
+      "key": "7ba93a7fcc2416ede1e3b82e10d44fc5f84118ef",
+      "library": "ds2026",
+      "description": "",
+      "page": "Illustrations & graphics",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
     "Type=Error state": {
       "key": "a372f58489ca865d303844c28076d8080606db8b",
       "library": "ds2026",
@@ -8186,6 +8192,56 @@
       "textProperties": [],
       "booleanProperties": []
     },
+    "Type=Success, Orientation'=Vertical": {
+      "key": "2a645f1bb2379cf2f7820bb14dac8b07100052a3",
+      "library": "ds2026",
+      "description": "",
+      "page": "        Alert (banner)",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Type=Danger, Orientation'=Vertical": {
+      "key": "2ad47e9b4e748bef50e900fa9fabfbc9e45f69d8",
+      "library": "ds2026",
+      "description": "",
+      "page": "        Alert (banner)",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Type=Primary, Orientation'=Vertical": {
+      "key": "d2f4cac49bf7d8a81cba9e49c0fa6e25bb71f091",
+      "library": "ds2026",
+      "description": "",
+      "page": "        Alert (banner)",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Type=Warning, Orientation'=Horizontal": {
+      "key": "d811d12f1c014676252427380b491f84cb659707",
+      "library": "ds2026",
+      "description": "",
+      "page": "        Alert (banner)",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
+    "Type=Warning, Orientation'=Vertical": {
+      "key": "dac79d202febe58640777ce1a6943e98ed6d58a5",
+      "library": "ds2026",
+      "description": "",
+      "page": "        Alert (banner)",
+      "variants": {},
+      "variantShortNames": {},
+      "textProperties": [],
+      "booleanProperties": []
+    },
     "Type=Global header, State=Default": {
       "key": "22082717cef362f82da0d341b570fde20d32cd8a",
       "library": "ds2026",
@@ -8356,7 +8412,7 @@
       "textProperties": [],
       "booleanProperties": []
     },
-    "Type=Danger": {
+    "Type=Danger, Orientation'=Horizontal": {
       "key": "e5403f7e8d8e885e4499279266c8899544399415",
       "library": "ds2026",
       "description": "",
