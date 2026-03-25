@@ -37,12 +37,15 @@ Works with any Figma component library — bring your own registry.
 
 ## Setup
 
-### 1. Build the component registry
+### 1. Sync the component registry from Figma
 
 ```bash
-FIGMA_TOKEN=figd_xxx node registry/build-registry.js
-node registry/build-token-map.js
+npm run sync                # sync both DS2026 + FM Kit
+npm run sync:ds             # DS2026 only
+npm run sync:fm             # FM Kit only
 ```
+
+Requires `FIGMA_TOKEN` in `.env` (see `.env.example`).
 
 ### 2. Build the Figma plugin
 
