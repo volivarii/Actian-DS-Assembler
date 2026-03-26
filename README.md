@@ -52,6 +52,9 @@ This repo:
     docs/accessibility-guidelines.md    ← curated WCAG 2.1 AA standards
     docs/component-guidelines/*.json    ← per-component content/design guidelines
     docs/foundations/*.json             ← foundation docs from Figma
+    docs/meta-kit-components.md         ← Meta Kit component keys and properties
+    docs/meta-kit-variables.md          ← DS2026 variable keys for scaffolding
+    docs/meta-kit-builders.md           ← JS builder functions for tables, grids
     ↓
 Claude plugin: scripts/sync-from-upstream.sh (fetches via GitHub raw URLs)
 ```
@@ -71,6 +74,9 @@ Claude plugin: scripts/sync-from-upstream.sh (fetches via GitHub raw URLs)
 | Accessibility guidelines (curated) | `docs/accessibility-guidelines.md` | Claude plugin (synced) |
 | Per-component guidelines | `docs/component-guidelines/*.json` | Claude plugin (synced) |
 | Foundation docs | `docs/foundations/*.json` | Claude plugin (synced) |
+| Meta Kit component catalog | `docs/meta-kit-components.md` | Claude plugin (synced) |
+| Meta Kit variable keys | `docs/meta-kit-variables.md` | Claude plugin (synced) |
+| Meta Kit builder functions | `docs/meta-kit-builders.md` | Claude plugin (synced) |
 | FM descriptions (manual) | `registry/fm-descriptions.json` | Sync script (fallback for FM) |
 
 ## Setup
